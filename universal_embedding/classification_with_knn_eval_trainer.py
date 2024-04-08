@@ -27,7 +27,7 @@ from scenic.train_lib import optimizers
 from scenic.train_lib import train_utils
 
 from universal_embedding import knn_utils
-from universal_embedding import vit_with_embedding
+from universal_embedding import utils
 from universal_embedding import sampling_utils
 
 
@@ -54,7 +54,11 @@ def backbone_lr(config):
 
 
 def get_multioptimizer(
-    optimizer_config, classifier_lr_fn, backbone_lr_fn, params
+    optimizer_config,
+    classifier_lr_fn,
+    backbone_lr_fn,
+    params,
+    config,
 ):
   """Makes a Flax MultiOptimizer with a separate backbone optimizer."""
 
@@ -66,17 +70,20 @@ def get_multioptimizer(
   )
 
   all_false = jax.tree_util.tree_map(lambda _: False, params)
+  
   classifier_traversal = flax.traverse_util.ModelParamTraversal(
-      lambda path, param: 'output_projection' in path
+      lambda path, param: any(x in path for x in config.params_early_train)
   )
+
   backbone_traversal = flax.traverse_util.ModelParamTraversal(
-      lambda path, param: 'output_projection' not in path
+      lambda path, param: all(x not in path for x in config.params_early_train)
   )
+
   classifer_mask = classifier_traversal.update(lambda _: True, all_false)
   backbone_mask = backbone_traversal.update(lambda _: True, all_false)
 
   return optax.chain(
-      optax.masked(backbone_optim, backbone_mask), #everything but the classifier
+      optax.masked(backbone_optim, backbone_mask),
       optax.masked(classifier_optim, classifer_mask),
   )
 
@@ -252,9 +259,7 @@ def train(
     *,
     rng: jnp.ndarray,
     config: ml_collections.ConfigDict,
-    model_cls: Type[
-        vit_with_embedding.ViTWithEmbeddingClassificationModel
-    ],
+    model_cls: Any,
     dataset_dict: Dict,   
     workdir: str,
     writer: metric_writers.MetricWriter,
@@ -316,6 +321,7 @@ def train(
       classifier_lr_fn,
       backbone_lr_fn,
       params=params,
+      config=config,
   )
   
   # We jit this, such that the arrays that are created on the same device as the
@@ -551,7 +557,7 @@ def train(
     ##################### CHECKPOINTING ###################
     if (
         (step % checkpoint_steps == 0 and step > 0) or (step == total_steps)
-    ) and config.checkpoint:
+    ) and config.checkpoint and not config.only_best_checkpoint:
       chrono.pause(wait_for=(train_state.params, train_state.opt_state))
 
       with report_progress.timed('checkpoint'):
@@ -608,6 +614,29 @@ def train(
             best_val_step = step
             best_average_common_val_knn_top_1 = epoch_average_common_val_knn_top_1
           
+            if config.checkpoint and config.only_best_checkpoint:
+              
+              #chrono.pause(wait_for=(train_state.params, train_state.opt_state))
+
+              with report_progress.timed('checkpoint'):
+                
+                # Sync model st date across replicas.
+                train_state = train_utils.sync_model_state_across_replicas(train_state)
+                
+                if lead_host:
+                  # Take the first replica.
+                  unrep_train_state = jax_utils.unreplicate(train_state)
+                  metadata = unrep_train_state.metadata
+                  metadata['chrono'] = chrono.save()
+                  unrep_train_state.replace(metadata=metadata)  # pytype: disable=attribute-error
+                  #import ipdb; ipdb.set_trace()
+                  utils.save_best_checkpoint(
+                      workdir,
+                      unrep_train_state,
+                  )
+                  del unrep_train_state
+
+
           writer.write_scalars(step, {'best_val_step':best_val_step})
           writer.write_scalars(step, {'best_average_common_val_knn_top_1':best_average_common_val_knn_top_1})
 
@@ -618,9 +647,15 @@ def train(
   #Do common testing on best val step checkpoint by loading the corresponding checkpoint
   if config.do_final_testing:
 
-    train_state, _ = train_utils.restore_checkpoint(
-        workdir, train_state, assert_exist=True, step=int(best_val_step),
-    )
+    if config.only_best_checkpoint:
+      train_state, _ = train_utils.restore_checkpoint(
+          workdir, train_state, assert_exist=True, step=-1,
+      )
+
+    else:
+      train_state, _ = train_utils.restore_checkpoint(
+          workdir, train_state, assert_exist=True, step=int(best_val_step),
+      )
 
     # Replicate the optimizer, state, and rng.
     train_state = jax_utils.replicate(train_state)
@@ -628,15 +663,27 @@ def train(
     config.disabled_merged_knns = "train_knn,val_knn"
     config.knn_eval_names = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
 
-    results = knn_utils.knn_step(
-      knn_evaluator,
-      train_state,
-      config,
-      workdir,
-      int(best_val_step),
-      writer,
-      load_descrs = False,
-    )
+
+    if config.only_best_checkpoint:
+      results = knn_utils.knn_step(
+        knn_evaluator,
+        train_state,
+        config,
+        workdir,
+        -1,
+        writer,
+        load_descrs=False,
+      )
+    else:
+      results = knn_utils.knn_step(
+        knn_evaluator,
+        train_state,
+        config,
+        workdir,
+        int(best_val_step),
+        writer,
+        load_descrs=False,
+      )
 
   # Wait until computations are done before exiting.
   train_utils.barrier_across_hosts()

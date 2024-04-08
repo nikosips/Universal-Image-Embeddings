@@ -1,155 +1,227 @@
 # Official Repository for the UnED dataset and benchmark
 
-This repository supports training and evaluating Universal Embeddings.
-The experiments in the respective publication can be replicated using the code provided here.
-The implementation uses [Scenic](https://github.com/google-research/scenic) framework, building on top of [JAX](https://github.com/google/jax) and [Flax](https://github.com/google/flax).
-
-The repository will be constantly updated for some time, in order to provide an easier interface for training and evaluation.
-New features will be added soon to make the use of the UnED dataset easier, as well as to improve ease of evaluating models on it.
+This repository supports training and evaluating of Universal Embeddings for fine-grained and instance-level recognition across diverse domains. 
+The experiments in the respective [ICCV publication](https://openaccess.thecvf.com/content/ICCV2023/papers/Ypsilantis_Towards_Universal_Image_Embeddings_A_Large-Scale_Dataset_and_Challenge_for_ICCV_2023_paper.pdf) can be replicated using the code provided in this repository.
+The implementation relies on the [Scenic](https://github.com/google-research/scenic) computer vision library, which is based on [JAX](https://github.com/google/jax) and [Flax](https://github.com/google/flax).
 
 Project webpage (includes UnED splits):
 https://cmp.felk.cvut.cz/univ_emb/
 
-Requirements:
+<img src= "https://cmp.felk.cvut.cz/univ_emb/img/all_domains-1.png" width=900>
+
+
+## Requirements
 
 1) Make sure to use Python 3.9
-2) Create Virtual Environment: ```python3.9 -m venv scenic_venv```
-3) Activate the Virtual Environment: ```source scenic_venv/bin/activate```
+2) Create Virtual Environment: ```python3.9 -m venv uned_venv```
+3) Activate the Virtual Environment: ```source uned_venv/bin/activate```
 4) Clone scenic: ```git clone https://github.com/google-research/scenic.git```
 5) Install scenic dependencies: ```cd scenic && pip install .```
-Keep in mind that you might need to modify the installation of Jax used depending on your accelerator.
-6) clone our repo: ```git clone https://github.com/nikosips/Universal-Image-Embeddings.git```
+Keep in mind that you might need to modify the installation of Jax used depending on the type of your accelerator (cpu, gpu, tpu).
+6) clone the UnED repo: ```git clone https://github.com/nikosips/Universal-Image-Embeddings.git```
 7) ```cd Universal-Image-Embeddings```
 
 
 ## Dataset preparation
 
-The UnED dataset contains 8 existing datasets.
-We provide a way to prepare all the data for training and evaluation.
+The UnED dataset consists of 8 existing datasets, with new splits proposed.
+We provide guidelines for how to prepare all the data that are used for training and evaluation.
+
+*  Create ```data``` directory inside the "Universal-Image-Embeddings" directory.
+
+* Download the splits of UnED (info files) (https://cmp.felk.cvut.cz/univ_emb/info_files.zip) and extract it inside the data directory.
+
+* Download (https://cmp.felk.cvut.cz/univ_emb/#dataset) and extract images for each one of the datasets comprising UnED, into ```data/images``` directory.
+You should follow the URL provided for each one of the datasets, in order to get the images of it.
+If you encounter any problems downloading any of the datasets from their original sources that we have linked, please contact us in order to help you. 
+```data/images``` directory should end up with the following structure (should contain the directories as shown below in order to work with the info files provided later):
+
+  ```
+  ├── images
+  │   ├── cars
+  │   │   └── car_ims
+  │   ├── food2k
+  │   │   └── Food2k_complete
+  │   ├── gldv2
+  │   │   ├── images
+  │   │   │   ├── index
+  │   │   │   ├── test
+  │   │   │   └── train
+  │   ├── inat
+  │   │   ├── iNaturalist
+  │   │   │   └── train_val2018
+  │   ├── deepfashion
+  │   │   ├── inshop
+  │   │   │   └── img
+  │   ├── met
+  │   │   ├── MET
+  │   │   ├── test_met
+  │   │   ├── test_noart
+  │   │   └── test_other
+  │   ├── rp2k
+  │   │   ├── all
+  │   │   │   ├── test
+  │   │   │   └── train
+  │   └── sop
+  │       ├── chair_final
+  │       └── ...
+  ```
+
+* Download the checkpoints that are used as a starting point for the finetuning (https://cmp.felk.cvut.cz/univ_emb/#checkpoints) and place them inside the ```models``` directory, by running the following command:
 
 
-1. Create "data" directory.
+  ```
+  bash download_models.sh
+  ```
 
-    * Download (links for the images are in the project website) and extract images into data/images directory.
-
-
-    * Download and extract info files from dataset website like this:
-
-```
-├── info_files
-│   ├── cars
-│   │   ├── test.json
-│   │   ├── train.json
-│   │   └── val.json
-│   ├── food2k
-│   │   ├── test.json
-│   │   ├── train.json
-│   │   └── val.json
-│   ├── gldv2
-│   │   ├── index.json
-│   │   ├── test.json
-│   │   ├── train.json
-│   │   └── val.json
-│   ├── inat
-│   │   ├── test.json
-│   │   ├── train.json
-│   │   └── val.json
-│   ├── inshop
-│   │   ├── index.json
-│   │   ├── test.json
-│   │   ├── train.json
-│   │   └── val.json
-│   ├── met
-│   │   ├── index.json
-│   │   ├── small_index.json
-│   │   ├── small_train.json
-│   │   ├── test.json
-│   │   ├── train.json
-│   │   └── val.json
-│   ├── rp2k
-│   │   ├── test.json
-│   │   ├── train.json
-│   │   └── val.json
-│   └── sop
-│       ├── test.json
-│       ├── train.json
-│       └── val.json
-```
+* Create the tfds records that are used to load the data for training and evaluation by running the following command:
 
 
-#### The provided Scenic code trains and evaluates with tfrecord dataloaders (tfds). These tfds files are hardcoded in "datasets.py" script, in DATASET_INFO dictionary, for each domain of the UnED dataset.
+  ```
+  bash prepare_data.sh
+  ```
 
-To create them from the image files and the info files, use the provided "convert_to_tfrecord_from_file.py" script.
-This needs to be done for every split in the UnED dataset (every .json file).
 
-Example usage: 
 
-for training splits of each domain:
-
-```
-dataset=gldv2; split=train ; python convert_to_tfrecord_from_file.py --info_file ~/data/info_files/$dataset/$split.json --output_file ~/data/tfds/$dataset/$split/$dataset.$split.tfrecord --files_dir ~/data/images/ --num_shards 150 --train
-```
-
-for evaluation splits of each domain (splits of val and test set):
+In the end, data folder should look like this:
 
 ```
-dataset=met; split=test ; python convert_to_tfrecord_from_file.py --info_file ~/data/info_files/$dataset/$split.json --output_file ~/data/tfds/$dataset/$split/$dataset.$split.tfrecord --files_dir ~/data/images/ --num_shards 1
+├── Universal-Image-Embeddings
+│   ├── data
+│   │   ├── images
+│   │   ├── info_files
+│   │   ├── models
+│   │   └── tfds
 ```
 
-- - - -
+## Training and evaluation on the UnED dataset
 
-### For training and evaluation, download the pretrained models used in this work.
-All training and evaluation hyperparameters are set in the config files.
-Sample config files are inside the universal_embedding/configs directory.
+Now that the data are ready, you are ready to train and evaluate embeddings on the UnED dataset.
 
-Checkpoints used in our work are hosted in the website.
+* <b>Embedding training and validation (and optional final testing)</b>
 
-In all the config files, you have to provide where info files are, as they are used in evaluation, as well as the directory of the checkpoints and the tfds files.
+  Configure the "config_train_vit.py" to the type of training you want to perform.
+  Checkpoints, embeddings and event files are saved in ```YOUR_WORKDIR```.
 
-Click to expand the use cases of our code below:
+  ```
+  python -m universal_embedding.main --config=universal_embedding/configs/config_train_vit.py --workdir=[YOUR_WORKDIR] --config.eval_dataset_dir='data/tfds' --config.train_dataset_dir='data/tfds' --config.info_files_dir='data/info_files' [optional wandb logging is supported. wandb flags are defined in app.py, please take a look there]
+  ```
 
-<details>
+* <b>Evaluation of embeddings trained with this repository</b>
 
-  <summary><b>Model training and validation (and optional final testing)</b></summary><br/>
-
-  Configure the "config_train_clip_vit.py" or "config_train_vit.py" to the type of training you want to perform.
+  Configure the "config_knn_vit.py" to the type of evaluation you want to perform.
+  Configure config.train_dir in the config file to the directory that the checkpoint of the training is saved.
   Checkpoints, descriptors and event files are saved in ```YOUR_WORKDIR```.
 
   ```
-  python -m universal_embedding.main --config=universal_embedding/configs/config_train_clip_vit.py --workdir=YOUR_WORKDIR
+  python -m universal_embedding.knn_main --config=universal_embedding/configs/config_knn_vit.py --workdir=[YOUR_WORKDIR] --config.eval_dataset_dir='data/tfds' --config.train_dataset_dir='data/tfds' --config.info_files_dir='data/info_files'
   ```
 
-</details>
 
-<details>
+* <b>Evaluation of your own embeddings on the UnED dataset</b>
 
-  <summary><b>Descriptor extraction and evaluation</b></summary><br/>
-
-  Configure the "config_knn_clip_vit.py" or "config_knn_vit.py" to the type of evaluation you want to perform.
-  Pro
-  Event files are saved in ```YOUR_WORKDIR```.
+  Configure the "config_descr_eval.py" to the type of evaluation you want to perform.
+  Checkpoints, descriptors and event files are saved in ```YOUR_WORKDIR```.
 
   ```
-  python -m universal_embedding.knn_main --config=universal_embedding/configs/config_knn_clip_vit.py --workdir=YOUR_WORKDIR
-  ```
+  python -m universal_embedding.descr_eval --config=universal_embedding/configs/config_descr_eval.py --workdir=[YOUR_WORKDIR] --config.eval_dataset_dir='data/tfds' --config.train_dataset_dir='data/tfds' --config.info_files_dir='data/info_files' --config.descr_path=[YOUR_EMBEDDINGS_PATH]
+  ```      
 
-</details>
+## Explanation of splits and the standard protocol for evaluating embeddings on the UnED dataset 
 
-<details>
+Each subdomain of the UnED dataset (e.g. CARS or Met) defines its own train, validation and test set.
+You can perform knn evaluation on these splits of each dataset, by using the proposed query and index subsplits of each split.
+Those subsplits are defined in the ```datasets.py``` script, 
+For example, for the CARS domain, the subsplits are:
 
-  <summary><b>Descriptor evaluation</b></summary><br/>
+```
+'knn': {
+    'train_knn': {
+        'query': 'train',
+        'index': 'train',
+    },
+    'val_knn': {
+        'query': 'val',
+        'index': 'val',
+    },
+    'test_knn': {
+        'query': 'test',
+        'index': 'test',
+    },
+},
+```
+which means that in order to perform knn evaluation on the validation split, the validation split acts as both the query and the index set.
 
-  Configure the "config_knn_descr_eval.py" to the type of evaluation you want to perform.
-  Event files are saved in ```YOUR_WORKDIR```.
+As another example, for Met domain the subsplits for knn evaluation are:
 
-  ```
-  python -m universal_embedding.descr_eval --config=universal_embedding/configs/config_knn_descr_eval.py --workdir=YOUR_WORKDIR
-  ```
+```
+'knn': {
+    'train_knn': {
+        'query': 'train',
+        'index': 'train',
+    },
+    'val_knn': {
+        'query': 'val',
+        'index': 'small_index',
+    },
+    'test_knn': {
+        'query': 'test',
+        'index': 'index',
+    },
+}
+```
 
-</details>
+which means that in order to do knn evaluation on the test split, the query set is the test set of the Met dataset, while the index set for the test split comes from the index set of the Met dataset. Those image sets are created when the tfds records are formed. To see to which exactly they correspond, look at prepare_data.sh script.
+
+If you want to extract embeddings with your own model to evaluate them using the ```descr_eval.py``` script, the embeddings should be provided in json format, in a dictionary with the following structure:
+
+For CARS:
+
+```
+'cars': {
+    'train': [list of descriptors for this split],
+    'val': [list of descriptors for this split],
+    'test': [list of descriptors for this split],
+},
+```
+
+or for Met:
+
+```
+'met': {
+    'train': [list of descriptors for this split],
+    'val': [list of descriptors for this split],
+    'small_index': [list of descriptors for this split],
+    'index': [list of descriptors for this split],
+    'test': [list of descriptors for this split],
+},
+```
+
+or subsets of the above that coincide with the splits you want to perform knn evaluation on.
+
+In the case of performing knn evaluation across many domains, it is always performed on the same split across datasets (e.g. train, validation or test).
+Two types of knn evaluation are supported in that case.
+"Separate" evaluation means that each dataset is evaluated on its own (the queries are compared against their index of their own domain), while "merged" evaluation means that the index sets of the corresponding splits across all domains are merged (the queries of each domain are compared against the merged index set). The latter, on the test split across all 8 domains corresponds to the standard evaluation protocol of the UnED benchmark.
 
 
 - - - -
+
+## State of repository
+
+
+The repository will be updated for some time, in order to provide an easier interface for training and evaluation.
+New features will be added soon to make the use of the UnED dataset easier, as well as to improve ease of evaluating embeddings on it.
+- - - -
+
+
+## Extra info
+
+- The words "embeddings" and "descriptors" are used interchangeably in the context of this repository.
+- With the current setup you can not do knn on the train splits, due to the shuffling performed on the train tfds
+
+## TODO
+
+-Provide ICCV configs specifically
 
 ## Citation
 
@@ -167,3 +239,8 @@ If you use our work in yours, please cite us using the following:
 ```
 
 - - - -
+
+## Acknowledgements
+
+We appreciate the help of [Elias Ramzi](https://github.com/elias-ramzi) on making the repository easier to use and spotting some bugs that existed in the initial version. 
+

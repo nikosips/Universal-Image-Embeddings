@@ -5,19 +5,12 @@ from clu import metric_writers
 import jax
 import jax.numpy as jnp
 import ml_collections
-from scenic import app
 from scenic.train_lib import train_utils
 
 import sys
 
-
-if sys.version_info.major == 3 and sys.version_info.minor >= 10:
-
-  from collections.abc import MutableMapping
-else:
-  from collections import MutableMapping
-
-from universal_embedding import knn_utils as knn_utils
+from universal_embedding import app
+from universal_embedding import knn_utils
 
 
 

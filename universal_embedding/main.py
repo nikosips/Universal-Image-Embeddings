@@ -6,13 +6,15 @@ from flax.training import checkpoints
 import jax
 import jax.numpy as jnp
 import ml_collections
-from scenic import app
+
+from universal_embedding import app
+
+
 from scenic.train_lib import train_utils
 
 from universal_embedding import classification_with_knn_eval_trainer
 from universal_embedding import datasets
 from universal_embedding import models
-
 
 
 
@@ -54,4 +56,5 @@ def main(
 
 
 if __name__ == '__main__':
+
   app.run(main=main)

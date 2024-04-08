@@ -495,9 +495,6 @@ class KNNEvaluator:
           lookup_key = datasets.dataset_lookup_key(dataset_name, val['query'])
           lookup_keys.add(lookup_key)
 
-        if config.do_pcaw:
-          lookup_key = datasets.dataset_lookup_key(dataset_name, val['pcaw'])
-
     inference_lookup = {}
   
     if all_descriptors_dict is not None:
@@ -846,18 +843,11 @@ def knn_single(
 ):
 
   knn_dataset_names = config.knn_eval_names.split(',')
-
-  if config.project_feats_knn:
-    descr_base_dir = os.path.join(config.descr_save_path,"descriptors")
-  else:
-    descr_base_dir = os.path.join(config.descr_save_path,"descriptors_no_project")
-
-  descr_save_path = os.path.join(descr_base_dir,f"descriptors.pkl")
    
   results_save_path = os.path.join(workdir,f"results.json")
   neigh_save_path = os.path.join(workdir,f"neighbors.pkl")
 
-  with gfile.GFile(descr_save_path, 'rb') as f:
+  with gfile.GFile(config.descr_path, 'rb') as f:
     all_descriptors_dict = json.load(f)
 
     print(f"some descriptors loaded")
@@ -871,7 +861,7 @@ def knn_single(
     train_state,
     knn_datasets_dir, 
     knn_dataset_names,
-    config.get('eval_batch_size', config.batch_size),
+    config.get('eval_batch_size',128),
     config.get('disabled_separate_knns', ''),
     all_descriptors_dict,
     config,
@@ -887,7 +877,7 @@ def knn_single(
     knn_datasets_dir,
     knn_dataset_names,
     knn_dataset_names,
-    config.get('eval_batch_size', config.batch_size),
+    config.get('eval_batch_size',128),
     config.get('disabled_merged_knns', ''),
     all_descriptors_dict,
     config,

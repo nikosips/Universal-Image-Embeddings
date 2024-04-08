@@ -1,7 +1,45 @@
 import json
 import numpy as np
 
+from tensorflow.io import gfile
+import ml_collections
 
+import jax
+from flax.training import checkpoints
+
+
+
+def save_best_checkpoint(
+    workdir,
+    train_state,
+):
+  """Saves a checkpoint.
+
+  Args:
+    workdir: Experiment directory for saving the checkpoint.
+    train_state: An instance of TrainState that holds the state of training.
+    max_to_keep: The number of checkpoints to keep.
+    overwrite: Overwrite existing checkpoint  if a checkpoint at the current or
+      a later step already exits (default: False).
+    **kwargs: Passed on to flax.training.checkpoints.save_checkpoint.
+  """
+  if jax.process_index() == 0:
+    # Get train state from the first replica.
+    checkpoint_state = jax.device_get(train_state)
+    checkpoints.save_checkpoint(
+        workdir,
+        checkpoint_state,
+        -1,
+        overwrite=True,
+    )
+
+def read_config(path):
+  with gfile.GFile(path) as f:
+    x = json.load(f)
+    x = json.loads(x)
+    x = ml_collections.ConfigDict(x)
+
+  return x
 
 
 def normalize(a,axis=-1,order=2):

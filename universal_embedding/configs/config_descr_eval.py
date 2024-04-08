@@ -9,32 +9,34 @@ def get_config():
 
   config = ml_collections.ConfigDict()
 
-  config.train_dir = ""
+  config.descr_path= ''
 
-  config.update(utils.read_config(os.path.join(config.train_dir,"config.json")))
   
   # kNN configs
+  
+  config.rng_seed = 0
 
-  config.knn_eval_names = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
+  config.knn_eval_names = "cars"
+
+  config.disabled_separate_knns = 'train_knn,test_knn'
+  config.disabled_merged_knns = 'train_knn,val_knn,test_knn'
   
-  config.disabled_separate_knns = 'train_knn,val_knn'
-  config.disabled_merged_knns = 'train_knn,val_knn'
-  
+
   config.eval_batch_size = 1024
   config.knn_eval_batch_size = 2048
 
   config.preextracted = False
   #config.preextracted = True
 
-  config.write_summary = True
-  #config.write_summary = False
+  #config.write_summary = True
+  config.write_summary = False
   
   config.test_pretrained_features = False
 
   config.extract_only_descrs = False
 
-  #config.save_descriptors = True
-  config.save_descriptors = False
+  config.save_descriptors = True
+  #config.save_descriptors = False
 
   config.debug_eval = False  # Debug mode during eval.
     
@@ -47,7 +49,6 @@ def get_config():
   config.top_k = 5 #top k neighbors to look at
   #config.top_k = 100
 
-  #if you were saving only best checkpoint
   config.only_best_knn = True
   #config.only_best_knn = False
 

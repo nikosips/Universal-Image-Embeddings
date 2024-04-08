@@ -186,8 +186,8 @@ DATASET_INFO = {
         'test_files': 'met/test/met.test.tfrecord',
         'val_files': 'met/val/met.val.tfrecord',
 
-        'index_files': 'met/index/met.train.tfrecord', #same as train set
-        'small_index_files': 'met/small_index/met.small_train.tfrecord', #same as small train set
+        'index_files': 'met/index/met.index.tfrecord', #same as train set
+        'small_index_files': 'met/small_index/met.small_index.tfrecord', #same as small train set
 
         'num_train_classes': 224408,
         'num_train_examples': 397121,
@@ -200,7 +200,7 @@ DATASET_INFO = {
             },
             'val_knn': {
                 'query': 'val',
-                'index': 'small_index', 
+                'index': 'small_index',
             },
             'test_knn': {
                 'query': 'test',
@@ -211,14 +211,14 @@ DATASET_INFO = {
 
     'gldv2': {
         'domain': 5,
-        'train_files': 'gldv2/train/gldv2.train_clean.tfrecord',        
+        'train_files': 'gldv2/train/gldv2.train.tfrecord',
         'test_files': 'gldv2/test/gldv2.test.tfrecord',
-        'val_files': 'gldv2/val/gldv2.val_train.tfrecord',
+        'val_files': 'gldv2/val/gldv2.val.tfrecord',
         'index_files': 'gldv2/index/gldv2.index.tfrecord',  # size 761757
 
         'num_train_classes': 73182,
         'num_train_examples': 1422914,
-        'num_test_examples': 1129, 
+        'num_test_examples': 1129,
         'num_val_examples': 157556,
         'knn': {
             'train_knn': {
@@ -268,7 +268,7 @@ DATASET_INFO = {
         'train_files': 'rp2k/train/rp2k.train.tfrecord',
         'test_files': 'rp2k/test/rp2k.test.tfrecord',
         'val_files': 'rp2k/val/rp2k.val.tfrecord',
-        
+
 
         'num_train_classes': 1074,
         'num_train_examples': 188724,
@@ -324,8 +324,8 @@ def _process_train_split(image):
   return image
 
 
-def _process_test_split(image): 
-  
+def _process_test_split(image):
+
   # Resize the small edge to 224.
   image, new_size = _resize_smaller_edge(image, IMAGE_SIZE)
   # Central crop to 224x224.
@@ -339,7 +339,7 @@ def _process_test_split(image):
 
 
 def _resize(image, image_size):
-  
+
   """
   Resizes the image.
 
@@ -350,21 +350,21 @@ def _resize(image, image_size):
   Returns:
     Resized image.
   """
-  
+
   return tf.image.resize(
-      image, 
-      [image_size, image_size], 
+      image,
+      [image_size, image_size],
       method=tf.image.ResizeMethod.BILINEAR,
   )
 
 
 def _resize_smaller_edge(
-  image, 
+  image,
   image_size,
 ):
-  
+
   """Resizes the smaller edge to the desired size and keeps the aspect ratio."""
-  
+
   shape = tf.shape(image)
   height, width = shape[0], shape[1]
   if height <= width:
@@ -377,20 +377,20 @@ def _resize_smaller_edge(
     new_height = tf.cast((height / width) * image_size, tf.int32)
 
   return tf.image.resize(
-      image, 
-      [new_height, new_width], 
+      image,
+      [new_height, new_width],
       method=tf.image.ResizeMethod.BILINEAR,
   ),(new_height, new_width)
 
 
 
 def preprocess_example(
-  example, 
+  example,
   split,
   total_classes,
-  domain, 
-  augment=False, 
-  dtype=tf.float32, 
+  domain,
+  augment=False,
+  dtype=tf.float32,
   label_offset=0,
   domain_mask_range = None,
   domain_idx = -1,
@@ -409,7 +409,7 @@ def preprocess_example(
   Returns:
     A preprocessed image `Tensor`.
   """
-  
+
   features = tf.io.parse_single_example(
       example,
       features={
@@ -418,7 +418,7 @@ def preprocess_example(
         'class_id': tf.io.FixedLenFeature([], tf.int64),
       },
   )
-  
+
   image = tf.io.decode_jpeg(features['image_bytes'], channels=3)
 
   if split == 'train' and augment:
@@ -428,7 +428,7 @@ def preprocess_example(
 
   image = _normalize_image(image,normalization_statistics)
   image = tf.image.convert_image_dtype(image, dtype=dtype)
-  
+
   domain_mask = np.full((total_classes),False)
   domain_mask[domain_mask_range[0]:domain_mask_range[1]] = True
 
@@ -442,12 +442,12 @@ def preprocess_example(
 
 
 def preprocess_example_eval(
-  example, 
+  example,
   split,
   total_classes,
-  domain, 
-  augment=False, 
-  dtype=tf.float32, 
+  domain,
+  augment=False,
+  dtype=tf.float32,
   domain_mask_range = None,
   domain_idx = -1,
   normalization_statistics = None,
@@ -464,7 +464,7 @@ def preprocess_example_eval(
   Returns:
     A preprocessed image `Tensor`.
   """
-  
+
   features = tf.io.parse_single_example(
       example,
       features={
@@ -472,7 +472,7 @@ def preprocess_example_eval(
         'key': tf.io.FixedLenFeature([], tf.string),
       },
   )
-  
+
   image = tf.io.decode_jpeg(features['image_bytes'], channels=3)
 
   if split == 'train' and augment:
@@ -496,12 +496,12 @@ def preprocess_example_eval(
 
 
 def load_tfrecords(
-    base_dir, 
-    dataset_name, 
+    base_dir,
+    dataset_name,
     split,
     total_classes,
-    augment=False, 
-    parallel_reads=4, 
+    augment=False,
+    parallel_reads=4,
     label_offset=0,
     domain_mask_range = None,
     domain_idx = -1,
@@ -522,7 +522,7 @@ def load_tfrecords(
   """
   dataset_info = DATASET_INFO[dataset_name]
   file_name = split + '_files'
-  
+
   path = os.path.join(base_dir, dataset_info[file_name])
 
   if not dataset_kwargs['knn']:
@@ -538,9 +538,9 @@ def load_tfrecords(
     )
 
   else:
-    
+
     files = tf.data.Dataset.list_files(path + "*",shuffle = False)
-    
+
     #files are not shuffled until here
     data = tf.data.TFRecordDataset(files)
 
@@ -552,7 +552,7 @@ def load_tfrecords(
   def _preprocess_example(example):
 
     if dataset_kwargs['knn']:
-      
+
       return preprocess_example_eval(
         example,
         split,
@@ -626,14 +626,14 @@ def build_dataset_new(
   dataset_kwargs['knn'] = knn
 
   def _shuffle_batch_prefetch(dataset, replica_batch_size, split):
-    
+
     if split == 'train' and repeat:
-    
+
       dataset = dataset.shuffle(
           shuffle_buffer_size, seed=seed, reshuffle_each_iteration=True,
       )
       dataset = dataset.batch(replica_batch_size, drop_remainder=True)
-    
+
       #shuffle the batches again
       batch_shuffle_buffer_size = 16
 
@@ -649,7 +649,7 @@ def build_dataset_new(
     options = tf.data.Options()
     options.experimental_optimization.parallel_batch = True
     dataset = dataset.with_options(options)
-    
+
     return dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
 
@@ -665,7 +665,7 @@ def build_dataset_new(
     ds_dict = dataset_fn(**dataset_kwargs)
 
     split = dataset_kwargs.get('split')
-    
+
     if split == 'train' and repeat:
 
       for ds_name,ds in ds_dict.items():
@@ -673,7 +673,7 @@ def build_dataset_new(
         ds_dict[ds_name] = _shuffle_batch_prefetch(ds, replica_batch_size, split)
 
       return ds_dict
-    
+
     else:
 
       #case of knn dataset (only one domain at a a time)
@@ -687,27 +687,27 @@ def build_dataset_new(
 
 
 def build_ds_iter(
-  ds, 
-  maybe_pad_batches, 
-  shard_batches, 
+  ds,
+  maybe_pad_batches,
+  shard_batches,
   prefetch_buffer_size,
 ):
-    
-  
+
+
   ds_iter = iter(ds)
   ds_iter = map(dataset_utils.tf_to_numpy, ds_iter)
   ds_iter = map(maybe_pad_batches, ds_iter)
   ds_iter = map(shard_batches, ds_iter)
   ds_iter = jax_utils.prefetch_to_device(ds_iter, prefetch_buffer_size)
-  
+
   return ds_iter
 
 
 
 def build_universal_embedding_dataset_new(
   base_dir,
-  dataset_names, 
-  split, 
+  dataset_names,
+  split,
   augment=False,
   **dataset_kwargs,
 ):
@@ -738,7 +738,7 @@ def build_universal_embedding_dataset_new(
 
     offset += DATASET_INFO[dataset_names[i]]['num_train_classes']
     ds_dict[dataset_names[i]]=new_ds
-      
+
   return ds_dict
 
 
@@ -922,7 +922,7 @@ def get_knn_eval_datasets(
   )
 
   shard_batches = functools.partial(
-    dataset_utils.shard, 
+    dataset_utils.shard,
     n_devices=num_local_shards,
   )
 
@@ -935,12 +935,12 @@ def get_knn_eval_datasets(
 
 
   for dataset_name in dataset_names:
-  
+
     knn_splits = set()
-  
+
     for val in DATASET_INFO[dataset_name]['knn'].values():
       knn_splits.add(val['query'])
-      knn_splits.add(val['index'])      
+      knn_splits.add(val['index'])
 
 
     for split in knn_splits:
@@ -961,7 +961,7 @@ def get_knn_eval_datasets(
         shard_batches,
         prefetch_buffer_size,
       )
-      
+
       knn_info[dataset_lookup_key(dataset_name, split)] = split_knn_iter
 
       json_data = {}
@@ -986,7 +986,7 @@ def get_knn_eval_datasets(
       knn_info['json_data'][dataset_lookup_key(dataset_name, split)] = json_data
 
     knn_setup[dataset_name] = DATASET_INFO[dataset_name]['knn']
-  
+
     size_info[dataset_name] = {
       'num_train_examples': DATASET_INFO[dataset_name]['num_train_examples'],
       'num_test_examples': DATASET_INFO[dataset_name]['num_test_examples'],
@@ -994,7 +994,7 @@ def get_knn_eval_datasets(
     }
 
   knn_info['knn_setup'] = knn_setup
-  
+
   meta_data = {
     'dataset_names': ','.join(dataset_names),
     'top_k': int(config.top_k),

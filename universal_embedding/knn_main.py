@@ -8,17 +8,18 @@ from flax import jax_utils
 import jax
 import jax.numpy as jnp
 import ml_collections
-from scenic import app
+
+#TODO: use our own app.py in the knn script as well?
+#from scenic import app
+
+
 from scenic.train_lib import train_utils
 
 import os
 import sys
 
-if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+from universal_embedding import app
 
-  from collections.abc import MutableMapping
-else:
-  from collections import MutableMapping
 
 from universal_embedding import classification_with_knn_eval_trainer
 from universal_embedding import datasets
@@ -44,7 +45,7 @@ def knn_evaluate(
   model = model_cls(config, dataset_dict.meta_data)
 
   rng, init_rng = jax.random.split(rng)
-  
+
   (params, model_state, _, _) = (
       train_utils.initialize_model(
         model_def=model.flax_model,
@@ -56,29 +57,29 @@ def knn_evaluate(
         rngs=init_rng,
       )
   )
-  
+
   train_state = train_utils.TrainState(
-    params=params, 
+    params=params,
     model_state=model_state
   )
 
 
   if config.pretrained_ckpt:
-    
+
     logging.info('Initializing from ckpt %s.', config.pretrained_ckpt)
 
-    if config.model_class == "clip_vit_with_embedding":
+    if config.model_class.startswith("clip_vit_with_embedding"):
 
       train_state = model.load_model_vars(
           train_state, config.pretrained_ckpt,
       )
 
-    elif config.model_class == "vit_with_embedding":
+    elif config.model_class.startswith("vit_with_embedding"):
 
       train_state = model.load_augreg_params(
           train_state, config.pretrained_ckpt, config.model
       )
-    
+
   train_state = jax_utils.replicate(train_state)
 
   del params
@@ -86,7 +87,7 @@ def knn_evaluate(
   #project feats or not
   representation_fn_knn = functools.partial(
     classification_with_knn_eval_trainer.representation_fn_eval,
-    flax_model = model.flax_model, 
+    flax_model = model.flax_model,
     project_feats = config.project_feats_knn
   )
 
@@ -114,14 +115,14 @@ def knn_evaluate(
       config.preextracted,
     )
 
-  for epoch in range(config.knn_start_epoch,config.knn_end_epoch+1):
+  if config.only_best_knn:
 
-    step = epoch * config.steps_per_epoch
+    step = -1
 
     print(f"step: {step}")
 
     if not config.preextracted:
-      ckpt_file = os.path.join(train_dir,str(step))  
+      ckpt_file = os.path.join(train_dir,str(step))
       ckpt_info = ckpt_file.split('/')
       ckpt_dir = '/'.join(ckpt_info[:-1])
       ckpt_num = ckpt_info[-1].split('_')[-1]
@@ -129,12 +130,12 @@ def knn_evaluate(
       try:
 
         train_state, _ = train_utils.restore_checkpoint(
-          ckpt_dir, 
-          train_state, 
-          assert_exist=True, 
+          ckpt_dir,
+          train_state,
+          assert_exist=True,
           step=int(ckpt_num),
         )
-        
+
       except:
 
         sys.exit("no checkpoint found")
@@ -154,6 +155,49 @@ def knn_evaluate(
       writer,
       config.preextracted,
     )
+
+  else:
+
+    for epoch in range(config.knn_start_epoch,config.knn_end_epoch+1):
+
+      step = epoch * config.steps_per_epoch
+
+      print(f"step: {step}")
+
+      if not config.preextracted:
+        ckpt_file = os.path.join(train_dir,str(step))
+        ckpt_info = ckpt_file.split('/')
+        ckpt_dir = '/'.join(ckpt_info[:-1])
+        ckpt_num = ckpt_info[-1].split('_')[-1]
+
+        try:
+
+          train_state, _ = train_utils.restore_checkpoint(
+            ckpt_dir,
+            train_state,
+            assert_exist=True,
+            step=int(ckpt_num),
+          )
+
+        except:
+
+          sys.exit("no checkpoint found")
+
+        train_state = jax_utils.replicate(train_state)
+
+      else:
+
+        train_state = None
+
+      knn_utils.knn_step(
+        knn_evaluator,
+        train_state,
+        config,
+        train_dir,
+        step,
+        writer,
+        config.preextracted,
+      )
 
   train_utils.barrier_across_hosts()
 

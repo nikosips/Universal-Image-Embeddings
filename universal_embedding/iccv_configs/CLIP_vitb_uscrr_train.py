@@ -11,11 +11,9 @@ def get_config():
   config.experiment_name = 'universal-embedding-vit'
 
   # Dataset.
-  config.dataset_name = "cars"
-  config.knn_eval_names = "cars"
-
-  # config.dataset_name = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
-  # config.knn_eval_names = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
+  
+  config.dataset_name = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
+  config.knn_eval_names = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
 
   config.data_dtype_str = 'float32'
 
@@ -35,8 +33,8 @@ def get_config():
   config.count_flops = False #bugged?
 
   # Model.
-  config.model_class = 'vit_with_embedding'
-  #config.model_class = 'clip_vit_with_embedding'
+  #config.model_class = 'vit_with_embedding'
+  config.model_class = 'clip_vit_with_embedding'
 
 
   if 'clip' in config.model_class:  
@@ -52,8 +50,8 @@ def get_config():
 
     model_configs = info_utils.ViT_configs
 
-  config.model_type = "S/16"
-  #config.model_type = "B/16"
+  #config.model_type = "S/16"
+  config.model_type = "B/16"
 
   #TODO: remove below line
   config.clip = False
@@ -98,7 +96,8 @@ def get_config():
   # config.max_grad_norm = 1.0
   config.label_smoothing = None
 
-  config.num_training_epochs = 30
+  #config.num_training_epochs = 30
+  config.num_training_epochs = 7
 
   config.batch_size = 128
 
@@ -108,7 +107,7 @@ def get_config():
   config.knn_eval_batch_size = 2048
 
   config.disabled_separate_knns = 'train_knn,test_knn'
-  config.disabled_merged_knns = 'train_knn,val_knn,test_knn'
+  config.disabled_merged_knns = 'train_knn,test_knn'
 
   config.rng_seed = 0
 
@@ -128,8 +127,8 @@ def get_config():
   config.log_eval_steps = config.steps_per_epoch
   
   #number of steps to log train metrics like loss etc.
-  #config.log_summary_steps = int(config.steps_per_epoch/10)
-  config.log_summary_steps = int(config.steps_per_epoch)
+  config.log_summary_steps = int(config.steps_per_epoch/10)
+  #config.log_summary_steps = int(config.steps_per_epoch)
 
   # Learning rate.
   base_lr = 1e-3
@@ -156,7 +155,7 @@ def get_config():
   # kNN
   config.do_knn = True
 
-  config.do_final_testing = False
+  config.do_final_testing = True
 
   config.save_descriptors = False
 

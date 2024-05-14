@@ -13,6 +13,8 @@ from universal_embedding import app
 from universal_embedding import knn_utils
 
 
+#TODO: check how this works before making public, with new app.py
+
 
 def knn_evaluate(
   rng: jnp.ndarray,
@@ -49,4 +51,5 @@ def knn_evaluate(
 
 
 if __name__ == '__main__':
-  app.run(main=knn_evaluate)
+
+  app.run(main=knn_evaluate,descr_eval=True)

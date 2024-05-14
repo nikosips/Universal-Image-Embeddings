@@ -1,6 +1,8 @@
-import os,ml_collections
+import ml_collections
 
-import universal_embedding.info_utils as info_utils
+
+#these default values can be overwritten by the cmd line args
+
 
 
 def get_config():
@@ -11,7 +13,6 @@ def get_config():
   config.experiment_name = 'universal-embedding-vit'
 
   # Dataset.
-  
   config.dataset_name = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
   config.knn_eval_names = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
 
@@ -36,34 +37,11 @@ def get_config():
   config.model_class = 'vit_with_embedding'
   #config.model_class = 'clip_vit_with_embedding'
 
-
-  if 'clip' in config.model_class:  
-
-    #TODO: put these in the dict of the models
-    config.normalization_statistics = ml_collections.ConfigDict()
-    config.normalization_statistics.MEAN_RGB = [0.48145466, 0.4578275, 0.40821073]
-    config.normalization_statistics.STDDEV_RGB = [0.26862954, 0.26130258, 0.27577711]
-
-    model_configs = info_utils.CLIP_ViT_configs
-  
-  else:
-
-    model_configs = info_utils.ViT_configs
-
   #config.model_type = "S/16"
   config.model_type = "B/16"
 
-  #TODO: remove below line
-  config.clip = False
-
   config.model = ml_collections.ConfigDict()
 
-  config.model.hidden_size = model_configs[config.model_type]["hidden_size"]
-  config.model.patches = ml_collections.ConfigDict()
-  config.model.patches.size = model_configs[config.model_type]["patches_size"]
-  config.model.num_heads = model_configs[config.model_type]["num_heads"]
-  config.model.mlp_dim = model_configs[config.model_type]["mlp_dim"]
-  config.model.num_layers = model_configs[config.model_type]["num_layers"]
   config.model.representation_size = None #we will always use that as None
 
   config.model.output_dim = 64 #our chosen embedding dimension
@@ -82,7 +60,6 @@ def get_config():
   #checkpoints
   config.pretrained_ckpt_dir = 'data/models/'
   
-  config.pretrained_ckpt = os.path.join(config.pretrained_ckpt_dir, model_configs[config.model_type]["checkpoint"])
   config.init_ckpt = ''
 
   # Training.
@@ -96,16 +73,14 @@ def get_config():
   # config.max_grad_norm = 1.0
   config.label_smoothing = None
 
-  #config.num_training_epochs = 30
-  config.num_training_epochs = 7
+  config.num_training_epochs = 7 #total number of training epochs
 
   config.batch_size = 128
-
-  config.steps_per_epoch = (info_utils.get_aggregated_size(config.dataset_name) // config.batch_size)
 
   config.eval_batch_size = 1024
   config.knn_eval_batch_size = 2048
 
+  #splits to not do knn during training
   config.disabled_separate_knns = 'train_knn,test_knn'
   config.disabled_merged_knns = 'train_knn,test_knn'
 
@@ -123,43 +98,37 @@ def get_config():
 
   config.max_to_keep = 1000
 
-  #number of steps to log knn validation metrics
-  config.log_eval_steps = config.steps_per_epoch
-  
-  #number of steps to log train metrics like loss etc.
-  config.log_summary_steps = int(config.steps_per_epoch/10)
-  #config.log_summary_steps = int(config.steps_per_epoch)
+  config.log_eval_steps_frequency = 1 #for knn eval
+  config.log_summary_steps_frequency = 10 #for logging training metrics
+  config.checkpoint_steps_frequency = 1 #for doing checkpoinint
 
   # Learning rate.
-  base_lr = 1e-3
-
   config.lr_configs = ml_collections.ConfigDict()
   config.lr_configs.learning_rate_schedule = 'compound'
   config.lr_configs.factors = 'constant'
-  config.lr_configs.base_learning_rate = base_lr
+  config.lr_configs.base_learning_rate = 1e-3 #lr of classifier
 
   config.lr_configs.backbone = ml_collections.ConfigDict()
-
   
-  frozen_epochs = 2 #that means for 2 epochs we train only the classifier
-  #frozen_epochs = config.num_training_epochs  # to completely freeze some parts
+  config.frozen_epochs = 2 #that means for 2 epochs we train only the classifier
 
-  config.lr_configs.backbone.frozen_steps = (
-      frozen_epochs * config.steps_per_epoch
-  )
-
-  config.lr_configs.backbone.base_learning_rate = base_lr * 1e-2
+  config.backbone_learning_rate_multiplier = 1e-2 #multiplies base_learning rate to get lr of the backbone
 
   config.params_early_train = ['output_projection']
 
+
   # kNN
   config.do_knn = True
+
+  config.embedd_to_eval = "projected"
 
   config.do_final_testing = True
 
   config.save_descriptors = False
 
   config.extract_only_descrs = False
+
+
 
   # Logging.
   config.write_summary = True
@@ -169,9 +138,6 @@ def get_config():
 
   config.only_best_checkpoint = True
   #config.only_best_checkpoint = False
-
-  #config.checkpoint_steps = config.steps_per_epoch * config.num_training_epochs #save only last model (at the end)
-  config.checkpoint_steps = config.steps_per_epoch #save checkpoint after every epoch
 
   config.debug_train = False  # Debug mode during training.
   config.debug_eval = False  # Debug mode during eval.

@@ -155,11 +155,18 @@ class ClipVisionTransformer(nn.Module):
       self,
       x: jnp.ndarray,
       train: bool,
+      init: bool = False,
       debug: bool = False,
       return_feats: bool = False,
       project_feats: bool = True,
   ) -> jnp.ndarray:
   
+    outputs = {}
+    outputs['embeddings'] = {}
+
+    if train or init:
+      outputs['classifier'] = {}
+
     x = nn.Conv(self.features,
                 kernel_size=(self.patch_size, self.patch_size),
                 strides=(self.patch_size, self.patch_size),
@@ -192,6 +199,8 @@ class ClipVisionTransformer(nn.Module):
     x = x[:, 0]
     x /= jnp.linalg.norm(x, ord=2, axis=1, keepdims=True)
 
+    outputs['embeddings']['backbone_out'] = x
+
     if project_feats:
 
       # our projection layer for dim reduction.
@@ -202,6 +211,9 @@ class ClipVisionTransformer(nn.Module):
 
       # l2 norm the embeddings (again)
       x /= jnp.linalg.norm(x, ord=2, axis=1, keepdims=True)
+
+      outputs['embeddings']['projected'] = x #TODO: use of project_feats flag is not needed anymore since they are two different named embeddings now
+
 
     if not return_feats:  # pass through classification layer
       x = nn.Dense(
@@ -215,7 +227,10 @@ class ClipVisionTransformer(nn.Module):
       )  # norms of class prototypes
       x /= weights_norms
 
-    return x 
+      outputs['classifier']['logits'] = x
+
+    return outputs
+
 
 
 

@@ -41,7 +41,7 @@ def main(
       logging.info('Folding global_step %s into dataset seed.', global_step)
       data_rng = jax.random.fold_in(data_rng, global_step)
 
-  dataset_dict = datasets.get_training_dataset_new(config)
+  dataset_dict = datasets.get_training_dataset(config)
 
   model_cls = models.MODELS[config.model_class]
 

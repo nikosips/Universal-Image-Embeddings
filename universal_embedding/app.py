@@ -18,6 +18,8 @@ import json
 
 import wandb
 
+from universal_embedding import utils
+
 
 FLAGS = flags.FLAGS
 
@@ -26,7 +28,7 @@ FLAGS = flags.FLAGS
 # define their own flags in their `main.py`.
 
 config_flags.DEFINE_config_file(
-    'config', None, 'Training configuration.', lock_config=True)
+    'config', None, 'Training configuration.', lock_config=False) #needed to change it to false
 flags.DEFINE_string('workdir', None, 'Work unit directory.')
 flags.DEFINE_string('dataset_service_address', None,
                     'Address of the tf.data service')
@@ -51,26 +53,58 @@ flax.config.update('flax_use_orbax_checkpointing', False)
 
 
 
-def run(main):
+def run(main,knn=False,descr_eval=False):
 
   # Provide access to --jax_backend_target and --jax_xla_backend flags.
   jax.config.config_with_absl()
-  app.run(functools.partial(_run_main, main=main))
+  app.run(functools.partial(_run_main, main=main,knn=knn,descr_eval=descr_eval))
 
 
 
 
-def _run_main(argv, *, main):
+def _run_main(
+  argv,
+  *,
+  main,
+  knn,
+  descr_eval,
+):
   """Runs the `main` method after some initial setup."""
   
   del argv
 
-  #save config of current experiment
-  with gfile.GFile(os.path.join(FLAGS.workdir,"config.json"), mode = "w") as f:
-    
-    os.makedirs(FLAGS.workdir, exist_ok = True)
+  #TODO: make sure the cmd line overriding values have already replaced the predefined ones
+  #they are the correct here
 
-    json.dump(FLAGS.config.to_json_best_effort(),f)
+  #here we should calculate all dependent parameters.
+  #calculate config dependent values based on cmd line config args
+
+  if knn:
+
+    #dependent value, can't be evaluated in the config
+    train_config_params = utils.read_config(os.path.join(FLAGS.config.train_dir,"config.json"))
+    train_config_params.update(FLAGS.config)
+    FLAGS.config = train_config_params
+
+  elif descr_eval:
+
+    pass
+
+  else:
+    
+    utils.calc_train_dependent_config_values(FLAGS.config)
+
+
+  if (not knn) and (not descr_eval): #save the training config
+
+    with gfile.GFile(os.path.join(FLAGS.workdir,"config.json"), mode = "w") as f:
+      
+      os.makedirs(FLAGS.workdir, exist_ok = True)
+
+      json.dump(json.loads(FLAGS.config.to_json_best_effort()),f,indent=4)
+
+
+
 
   if FLAGS.debug_on_tpu:
     jax.config.update('jax_platform_name', 'cpu')

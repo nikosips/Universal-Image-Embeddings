@@ -9,10 +9,6 @@ import jax
 import jax.numpy as jnp
 import ml_collections
 
-#TODO: use our own app.py in the knn script as well?
-#from scenic import app
-
-
 from scenic.train_lib import train_utils
 
 import os
@@ -20,11 +16,11 @@ import sys
 
 from universal_embedding import app
 
-
-from universal_embedding import classification_with_knn_eval_trainer
+from universal_embedding import train_eval_steps
 from universal_embedding import datasets
 from universal_embedding import knn_utils
 from universal_embedding import models
+from universal_embedding import model_init
 
 
 
@@ -39,23 +35,18 @@ def knn_evaluate(
   lead_host = jax.process_index() == 0
 
   #dataset used for training
-  dataset_dict = datasets.get_training_dataset_new(config)
+  dataset_dict = datasets.get_training_dataset(config)
 
   model_cls = models.MODELS[config.model_class]
   model = model_cls(config, dataset_dict.meta_data)
 
   rng, init_rng = jax.random.split(rng)
 
-  (params, model_state, _, _) = (
-      train_utils.initialize_model(
-        model_def=model.flax_model,
-        input_spec=[(
-            dataset_dict.meta_data['input_shape'],
-            dataset_dict.meta_data.get('input_dtype', jnp.float32),
-        )],
-        config=config,
-        rngs=init_rng,
-      )
+  (params, model_state, num_trainable_params, gflops) = model_init.initialize_universal_model(
+    dataset_dict,
+    config,
+    model,
+    init_rng,
   )
 
   train_state = train_utils.TrainState(
@@ -86,9 +77,10 @@ def knn_evaluate(
 
   #project feats or not
   representation_fn_knn = functools.partial(
-    classification_with_knn_eval_trainer.representation_fn_eval,
+    train_eval_steps.representation_fn_eval,
     flax_model = model.flax_model,
-    project_feats = config.project_feats_knn
+    project_feats = config.project_feats_knn,
+    config=config,
   )
 
   knn_eval_batch_size = config.get('knn_eval_batch_size') or config.batch_size
@@ -204,4 +196,4 @@ def knn_evaluate(
 
 
 if __name__ == '__main__':
-  app.run(main=knn_evaluate)
+  app.run(main=knn_evaluate,knn=True)

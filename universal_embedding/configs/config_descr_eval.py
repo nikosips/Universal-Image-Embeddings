@@ -2,6 +2,8 @@ import ml_collections, os
 from universal_embedding import utils
 
 
+#TODO: make sure this works properly with new app.py
+
 
 def get_config():
 
@@ -13,14 +15,14 @@ def get_config():
 
   
   # kNN configs
+  config.descr_eval=True
   
   config.rng_seed = 0
 
-  config.knn_eval_names = "cars"
+  config.knn_eval_names = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
 
-  config.disabled_separate_knns = 'train_knn,test_knn'
-  config.disabled_merged_knns = 'train_knn,val_knn,test_knn'
-  
+  config.disabled_separate_knns = 'train_knn,val_knn'
+  config.disabled_merged_knns = 'train_knn,val_knn'
 
   config.eval_batch_size = 1024
   config.knn_eval_batch_size = 2048

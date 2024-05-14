@@ -17,7 +17,7 @@ https://cmp.felk.cvut.cz/univ_emb/
 3) Activate the Virtual Environment: ```source uned_venv/bin/activate```
 4) Clone scenic: ```git clone https://github.com/google-research/scenic.git```
 5) Install scenic dependencies: ```cd scenic && pip install .```
-Keep in mind that you might need to modify the installation of Jax used depending on the type of your accelerator (cpu, gpu, tpu).
+Keep in mind that you might need to modify the installation of Jax used depending on the type of your accelerator (CPU, GPU, TPU).
 6) clone the UnED repo: ```git clone https://github.com/nikosips/Universal-Image-Embeddings.git```
 7) ```cd Universal-Image-Embeddings```
 
@@ -111,7 +111,7 @@ Now that the data are ready, you are ready to train and evaluate embeddings on t
 
   Configure the "config_knn_vit.py" to the type of evaluation you want to perform.
   Configure config.train_dir in the config file to the directory that the checkpoint of the training is saved.
-  Checkpoints, descriptors and event files are saved in ```YOUR_WORKDIR```.
+  Descriptors and event files are saved in ```YOUR_WORKDIR```.
 
   ```
   python -m universal_embedding.knn_main --config=universal_embedding/configs/config_knn_vit.py --workdir=[YOUR_WORKDIR] --config.eval_dataset_dir='data/tfds' --config.train_dataset_dir='data/tfds' --config.info_files_dir='data/info_files'
@@ -121,11 +121,18 @@ Now that the data are ready, you are ready to train and evaluate embeddings on t
 * <b>Evaluation of your own embeddings on the UnED dataset</b>
 
   Configure the "config_descr_eval.py" to the type of evaluation you want to perform.
-  Checkpoints, descriptors and event files are saved in ```YOUR_WORKDIR```.
+  Event files are saved in ```YOUR_WORKDIR```.
 
   ```
   python -m universal_embedding.descr_eval --config=universal_embedding/configs/config_descr_eval.py --workdir=[YOUR_WORKDIR] --config.eval_dataset_dir='data/tfds' --config.train_dataset_dir='data/tfds' --config.info_files_dir='data/info_files' --config.descr_path=[YOUR_EMBEDDINGS_PATH]
   ```      
+
+
+* <b>Extraction of embeddings on your own images using models trained on UnED</b>
+
+  TODO
+
+
 
 ## Explanation of splits and the standard protocol for evaluating embeddings on the UnED dataset 
 
@@ -221,7 +228,10 @@ New features will be added soon to make the use of the UnED dataset easier, as w
 
 ## TODO
 
--Provide ICCV configs specifically
+- Provide ICCV checkpoints for universal models (need to store the config files of training as well, because they will be needed to re-init the model)
+- Add descriptor extraction for a PyTorch ImageDir dataset
+- Support continuing training from a checkpoint
+- Update the knn script to newer version
 
 ## Citation
 
@@ -243,4 +253,5 @@ If you use our work in yours, please cite us using the following:
 ## Acknowledgements
 
 We appreciate the help of [Elias Ramzi](https://github.com/elias-ramzi) on making the repository easier to use and spotting some bugs that existed in the initial version. 
+Also, the repository is inspired by the codebase of [Poly-ViT](https://github.com/google-research/scenic/tree/main/scenic/projects/polyvit) .
 

@@ -7,45 +7,17 @@ from flax.training import common_utils
 import jax
 import jax.numpy as jnp
 import ml_collections
+
 from scenic.model_lib.base_models import base_model
 from scenic.model_lib.base_models import model_utils
 from scenic.model_lib.base_models import multilabel_classification_model
 
-
-
-
-def _transform_logits(
-    logits,
-    one_hot,
-    loss_config,
-):
-  '''
-  Transformation of the logits for different softmax margin losses.
-  Transform type can be one of : [arcface, normface, cosface].
-  '''
-
-  if loss_config.transform_logits_type == "arcface":
-
-    theta_yi = jax.lax.acos(logits * one_hot)
-    
-    transformed_logits = jax.lax.cos(
-        theta_yi + loss_config.m
-    ) * one_hot + logits * (1 - one_hot)
-
-  elif loss_config.transform_logits_type == "cosface":  
-    transformed_logits = (logits - loss_config.m) * one_hot + logits * (1 - one_hot)
-
-  elif loss_config.transform_logits_type == "normface":  
-    transformed_logits = logits
-  
-  transformed_logits *= loss_config.scale
-  
-  return transformed_logits
+from universal_embedding import loss_utils
 
 
 
 def classification_metrics_function(
-    logits: jnp.array,
+    outputs: Dict,
     batch: base_model.Batch,
     loss_config: ml_collections.ConfigDict,
     target_is_multihot: bool = False,
@@ -74,6 +46,8 @@ def classification_metrics_function(
     (metric, normalizer).
   """
 
+  logits = outputs['classifier']['logits']
+
   if target_is_multihot:
     multihot_target = batch['label']
   else:
@@ -81,7 +55,7 @@ def classification_metrics_function(
     # single-label classification tasks:    
     multihot_target = common_utils.onehot(batch['label'], logits.shape[-1])
     
-  transformed_logits = _transform_logits(logits, multihot_target, loss_config)
+  transformed_logits = loss_utils._transform_logits(logits, multihot_target, loss_config)
 
   weights = batch.get('batch_mask')
 
@@ -100,7 +74,7 @@ def classification_metrics_function(
   #logits for prec@1, transformed logits for loss
   evaluated_metrics = {
     
-      'prec@1': model_utils.psum_metric_normalizer(
+      'classifier_prec@1': model_utils.psum_metric_normalizer(
           (
               model_utils.weighted_top_one_correctly_classified(
                   logits, multihot_target, weights
@@ -111,7 +85,7 @@ def classification_metrics_function(
       ),
 
       #the loss is masked if we use domain masks
-      'loss': model_utils.psum_metric_normalizer(
+      'classifier_loss': model_utils.psum_metric_normalizer(
           (
               model_utils.weighted_unnormalized_softmax_cross_entropy(
                   transformed_logits, multihot_target, weights
@@ -173,14 +147,14 @@ class UniversalEmbeddingClassificationModel(
         target_is_multihot=self.dataset_meta_data.get(
             'target_is_onehot', False
         ),
-        loss_config=self.config.loss,
+        loss_config=self.config.loss, #comment this out?
     )
 
 
 
   def loss_function(
       self,
-      logits: jnp.ndarray,
+      outputs: Dict,
       batch: base_model.Batch,
       model_params: Optional[jnp.array] = None,
       classifier = "separate",
@@ -197,11 +171,13 @@ class UniversalEmbeddingClassificationModel(
       Total loss.
     """
 
+    logits = outputs['classifier']['logits']
+
     # logits are cosine similarities at this point
     one_hot_targets = common_utils.onehot(batch['label'], logits.shape[-1])
 
     #transform based on type of softmax margin loss
-    transformed_logits = _transform_logits(logits, one_hot_targets, self.config.loss)
+    transformed_logits = loss_utils._transform_logits(logits, one_hot_targets, self.config.loss)
     
     if classifier == "separate":
 

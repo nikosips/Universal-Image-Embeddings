@@ -42,10 +42,18 @@ class ViTWithEmbedding(vit.ViT):
       x: jnp.ndarray, #batch of images
       *,
       train: bool,
+      init: bool = False,
       debug: bool = False,
       return_feats: bool = False,
       project_feats: bool = True,
   ):
+
+
+    outputs = {}
+    outputs['embeddings'] = {}
+
+    if train or init:
+      outputs['classifier'] = {}
 
 
     fh, fw = self.patches.size
@@ -93,6 +101,8 @@ class ViTWithEmbedding(vit.ViT):
     # l2 normalize the output
     x /= jnp.linalg.norm(x, ord=2, axis=1, keepdims=True)
 
+    outputs['embeddings']['backbone_out'] = x
+
     if project_feats: # our projection layer for dim reduction.
 
       if self.output_dim > 0:
@@ -101,6 +111,8 @@ class ViTWithEmbedding(vit.ViT):
         x = nn_layers.IdentityLayer(name='projection')(x)
       # l2 norm the embeddings again
       x /= jnp.linalg.norm(x, ord=2, axis=1, keepdims=True)
+
+      outputs['embeddings']['projected'] = x #TODO: use of project_feats flag is not needed anymore since they are two different named embeddings now
 
     if not return_feats: # pass through classification layer
 
@@ -116,7 +128,9 @@ class ViTWithEmbedding(vit.ViT):
       )  # norms of class prototypes
       x /= weights_norms
 
-    return x
+      outputs['classifier']['logits'] = x
+
+    return outputs
 
 
 

@@ -19,14 +19,15 @@ import json
 import numpy as np
 from collections import OrderedDict
 
+import universal_embedding.info_utils as info_utils
+
+
 
 PRNGKey = jnp.ndarray
 
+#TODO: put these in the config
 IMAGE_RESIZE = 256
 IMAGE_SIZE = 224
-
-MEAN_RGB = [0.5,0.5,0.5]
-STDDEV_RGB = [0.5,0.5,0.5]
 
 
 
@@ -297,18 +298,9 @@ def _normalize_image(
     normalization_statistics,
 ):
 
-  if normalization_statistics is None:
-
-      image /= tf.constant(255, shape=[1, 1, 3], dtype=image.dtype)
-      image -= tf.constant(MEAN_RGB, shape=[1, 1, 3], dtype=image.dtype)
-      image /= tf.constant(STDDEV_RGB, shape=[1, 1, 3], dtype=image.dtype)
-
-  else:
-
-      image /= tf.constant(255, shape=[1, 1, 3], dtype=image.dtype)
-      image -= tf.constant(normalization_statistics["MEAN_RGB"], shape=[1, 1, 3], dtype=image.dtype)
-      image /= tf.constant(normalization_statistics["STDDEV_RGB"], shape=[1, 1, 3], dtype=image.dtype)
-
+  image /= tf.constant(255, shape=[1, 1, 3], dtype=image.dtype)
+  image -= tf.constant(normalization_statistics["MEAN_RGB"], shape=[1, 1, 3], dtype=image.dtype)
+  image /= tf.constant(normalization_statistics["STDDEV_RGB"], shape=[1, 1, 3], dtype=image.dtype)
 
   return image
 
@@ -545,8 +537,16 @@ def load_tfrecords(
     data = tf.data.TFRecordDataset(files)
 
 
+  if 'clip' in dataset_kwargs["config"].model_class:
+
+    model_configs = info_utils.CLIP_ViT_configs
+
+  else:
+
+    model_configs = info_utils.ViT_configs
+
   #a dict of mean and std for image normalization
-  normalization_statistics = dataset_kwargs["config"].get("normalization_statistics",None)
+  normalization_statistics = model_configs[dataset_kwargs["config"].model_type]["normalization_statistics"]
 
 
   def _preprocess_example(example):
@@ -722,7 +722,7 @@ def build_universal_embedding_dataset_new(
   offset = 0
 
   for i in range(len(dataset_names)):
-
+  
     new_ds = load_tfrecords(
         base_dir,
         dataset_names[i],
@@ -743,13 +743,13 @@ def build_universal_embedding_dataset_new(
 
 
 
-def get_training_dataset_new(
+def get_training_dataset(
   config: ml_collections.ConfigDict,
   num_local_shards: Optional[int] = None,
   prefetch_buffer_size: Optional[int] = 2,
   dataset_configs: Optional[ml_collections.ConfigDict] = None,
 ):
-  """Returns generators for the universal embedding train, validation, and test sets.
+  """Returns generators for the universal embedding train set.
 
   Args:
     config: The configuration of the experiment.
@@ -762,9 +762,9 @@ def get_training_dataset_new(
       the config.
 
   Returns:
-    A dataset_utils.Dataset() which includes a train_iter, a valid_iter,
-      a test_iter, and a dict of meta_data.
+    A dataset_utils.Dataset() which includes a train_iter and a dict of meta_data.
   """
+
   device_count = jax.device_count()
   logging.info('device_count: %d', device_count)
   logging.info('num_hosts : %d', jax.process_count())
@@ -945,22 +945,28 @@ def get_knn_eval_datasets(
 
     for split in knn_splits:
 
-      split_knn_ds = build_dataset_new(
-        dataset_fn=build_universal_embedding_dataset_new,
-        dataset_names=[dataset_name],
-        split=split,
-        batch_size=local_eval_batch_size,
-        base_dir = base_dir,
-        config = config,
-        knn = True,
-      )
+      if config.get("descr_eval"): #no need to load tfrecords in case of evaluating preextracted descriptors
 
-      split_knn_iter = build_ds_iter(
-        split_knn_ds,
-        maybe_pad_batches_eval,
-        shard_batches,
-        prefetch_buffer_size,
-      )
+        split_knn_iter = None
+        
+      else:
+        
+        split_knn_ds = build_dataset_new(
+          dataset_fn=build_universal_embedding_dataset_new,
+          dataset_names=[dataset_name],
+          split=split,
+          batch_size=local_eval_batch_size,
+          base_dir = base_dir,
+          config = config,
+          knn = True,
+        )
+
+        split_knn_iter = build_ds_iter(
+          split_knn_ds,
+          maybe_pad_batches_eval,
+          shard_batches,
+          prefetch_buffer_size,
+        )
 
       knn_info[dataset_lookup_key(dataset_name, split)] = split_knn_iter
 

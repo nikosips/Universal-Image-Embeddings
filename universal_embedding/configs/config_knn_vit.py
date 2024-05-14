@@ -1,5 +1,5 @@
 import ml_collections, os
-from universal_embedding import utils
+
 
 
 
@@ -11,9 +11,11 @@ def get_config():
 
   config.train_dir = ""
 
-  config.update(utils.read_config(os.path.join(config.train_dir,"config.json")))
-  
   # kNN configs
+
+  #values below here overwrite those of training config that are the default ones
+
+  config.embedd_to_eval = "projected"
 
   config.knn_eval_names = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
   
@@ -33,8 +35,8 @@ def get_config():
 
   config.extract_only_descrs = False
 
-  #config.save_descriptors = True
-  config.save_descriptors = False
+  config.save_descriptors = True
+  #config.save_descriptors = False
 
   config.debug_eval = False  # Debug mode during eval.
     
@@ -51,6 +53,7 @@ def get_config():
   config.only_best_knn = True
   #config.only_best_knn = False
 
+  #if only_best_knn is True, below epochs are not taken into account
   config.knn_start_epoch = 3
   config.knn_end_epoch = 7 #set this to a lower value than start_epoch to not do knn at all
 

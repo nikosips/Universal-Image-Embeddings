@@ -35,8 +35,8 @@ def get_config():
 
   config.extract_only_descrs = False
 
-  config.save_descriptors = True
-  #config.save_descriptors = False
+  #config.save_descriptors = True
+  config.save_descriptors = False
 
   config.debug_eval = False  # Debug mode during eval.
     

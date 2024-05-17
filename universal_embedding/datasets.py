@@ -529,7 +529,6 @@ def preprocess_example_extract(
 
   return {
     'inputs': image,
-    #'path': example, #how to return path here?
   }
 
 
@@ -666,12 +665,27 @@ def load_dir_dataset(
     n_validation_shards is 0, the validation dataset will be None.
   """
 
-  data = tf.data.Dataset.list_files(base_dir + "/*",shuffle = False)
-  
-  #different generator
-  data2 = tf.data.Dataset.list_files(base_dir + "/*",shuffle = False)
 
-  paths = [x.numpy().decode('utf-8') for x in data2]
+  # data = tf.data.Dataset.list_files(base_dir + "/*",shuffle = False)
+  # #different generator
+  # data2 = tf.data.Dataset.list_files(base_dir + "/*",shuffle = False)
+
+  # paths = [x.numpy().decode('utf-8') for x in data2]
+
+
+  ####################
+  with open(os.path.join(base_dir, 'test_gallery.txt')) as fid:
+  #with open(os.path.join(base_dir, 'test_query.txt')) as fid:    
+    db_lines = fid.read().splitlines()
+
+  db_lines = [os.path.join(base_dir, x.split(',')[0]) for x in db_lines] 
+
+  data=tf.data.Dataset.from_tensor_slices(db_lines)
+  ####################
+  #import ipdb; ipdb.set_trace()
+
+
+  paths = db_lines
 
 
   if 'clip' in dataset_kwargs["config"].model_class:
@@ -730,11 +744,11 @@ def build_extract_dir_dataset(
 
   def _shuffle_batch_prefetch(dataset, replica_batch_size):
 
-    dataset = dataset.batch(replica_batch_size, drop_remainder=False)
+    dataset=dataset.batch(replica_batch_size, drop_remainder=False)
 
-    options = tf.data.Options()
-    options.experimental_optimization.parallel_batch = True
-    dataset = dataset.with_options(options)
+    options=tf.data.Options()
+    options.experimental_optimization.parallel_batch=True
+    dataset=dataset.with_options(options)
 
     return dataset.prefetch(tf.data.experimental.AUTOTUNE)
 

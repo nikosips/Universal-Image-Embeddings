@@ -37,11 +37,11 @@ def get_config():
   config.count_flops = False #bugged?
 
   # Model.
-  config.model_class = 'vit_with_embedding'
-  #config.model_class = 'clip_vit_with_embedding'
+  #config.model_class = 'vit_with_embedding'
+  config.model_class = 'clip_vit_with_embedding'
 
-  config.model_type = "S/16"
-  #config.model_type = "B/16"
+  #config.model_type = "S/16"
+  config.model_type = "B/16"
 
   config.model = ml_collections.ConfigDict()
 

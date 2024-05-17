@@ -120,7 +120,7 @@ def train(
     params=params,
     model_state=model_state,
     rng=train_rng,
-    metadata={'chrono': chrono.save(),'config': config},
+    metadata={'chrono': chrono.save()},
   )
 
   start_step = train_state.global_step
@@ -308,12 +308,14 @@ def train(
           unrep_train_state = jax_utils.unreplicate(train_state)
           metadata = unrep_train_state.metadata
           metadata['chrono'] = chrono.save()
+          metadata['config'] = config 
           unrep_train_state.replace(metadata=metadata)
           train_utils.save_checkpoint(
-              workdir,
-              unrep_train_state,
-              max_to_keep=config.get('max_to_keep', 10),
-              overwrite=True
+            workdir,
+            unrep_train_state,
+            max_to_keep=config.get('max_to_keep', 10),
+            overwrite=True,
+            config=config,
           )
           del unrep_train_state
 
@@ -372,11 +374,11 @@ def train(
                   unrep_train_state = jax_utils.unreplicate(train_state)
                   metadata = unrep_train_state.metadata
                   metadata['chrono'] = chrono.save()
+                  metadata['config'] = config 
                   unrep_train_state.replace(metadata=metadata)  # pytype: disable=attribute-error
-                  #import ipdb; ipdb.set_trace()
                   utils.save_best_checkpoint(
-                      workdir,
-                      unrep_train_state,
+                    workdir,
+                    unrep_train_state,
                   )
                   del unrep_train_state
 

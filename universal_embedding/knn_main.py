@@ -42,6 +42,7 @@ def knn_evaluate(
 
   rng, init_rng = jax.random.split(rng)
 
+  #do I need to do this? in knn script?
   (params, model_state, num_trainable_params, gflops) = model_init.initialize_universal_model(
     dataset_dict,
     config,
@@ -127,6 +128,8 @@ def knn_evaluate(
           assert_exist=True,
           step=int(ckpt_num),
         )
+
+        import ipdb; ipdb.set_trace()
 
       except:
 

@@ -81,9 +81,12 @@ def _run_main(
 
   if knn:
 
+    #import ipdb; ipdb.set_trace()
+
     #dependent value, can't be evaluated in the config
     train_config_params = utils.read_config(os.path.join(FLAGS.config.train_dir,"config.json"))
     train_config_params.update(FLAGS.config)
+    
     FLAGS.config = train_config_params
 
   elif descr_eval:

@@ -19,7 +19,7 @@ def get_config():
 
   config.knn_eval_names = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
   
-  config.disabled_separate_knns = 'train_knn,val_knn'
+  config.disabled_separate_knns = 'train_knn,'
   config.disabled_merged_knns = 'train_knn,val_knn'
   
   config.eval_batch_size = 1024
@@ -35,8 +35,8 @@ def get_config():
 
   config.extract_only_descrs = False
 
-  config.save_descriptors = True
-  #config.save_descriptors = False
+  #config.save_descriptors = True
+  config.save_descriptors = False
 
   config.debug_eval = False  # Debug mode during eval.
     

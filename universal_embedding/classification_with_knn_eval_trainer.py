@@ -114,13 +114,13 @@ def train(
   chrono = train_utils.Chrono(warmup=1)
 
   train_state = train_utils.TrainState(
-      global_step=0,
-      opt_state=opt_state,
-      tx=tx,
-      params=params,
-      model_state=model_state,
-      rng=train_rng,
-      metadata={'chrono': chrono.save()},
+    global_step=0,
+    opt_state=opt_state,
+    tx=tx,
+    params=params,
+    model_state=model_state,
+    rng=train_rng,
+    metadata={'chrono': chrono.save(),'config': config},
   )
 
   start_step = train_state.global_step

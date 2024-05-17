@@ -308,7 +308,7 @@ def train(
           unrep_train_state = jax_utils.unreplicate(train_state)
           metadata = unrep_train_state.metadata
           metadata['chrono'] = chrono.save()
-          metadata['config'] = config 
+          metadata['config'] = config.to_dict()
           unrep_train_state.replace(metadata=metadata)
           train_utils.save_checkpoint(
             workdir,
@@ -374,7 +374,7 @@ def train(
                   unrep_train_state = jax_utils.unreplicate(train_state)
                   metadata = unrep_train_state.metadata
                   metadata['chrono'] = chrono.save()
-                  metadata['config'] = config 
+                  metadata['config'] = config.to_dict()
                   unrep_train_state.replace(metadata=metadata)  # pytype: disable=attribute-error
                   utils.save_best_checkpoint(
                     workdir,

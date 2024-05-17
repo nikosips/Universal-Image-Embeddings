@@ -22,7 +22,6 @@ def classification_metrics_function(
     loss_config: ml_collections.ConfigDict,
     target_is_multihot: bool = False,
     axis_name: Union[str, Tuple[str, ...]] = 'batch',
-    classifier = "separate",
 ) -> Dict[str, Tuple[float, int]]:
   """Calculates metrics for the multi-label classification task.
 
@@ -59,43 +58,38 @@ def classification_metrics_function(
 
   weights = batch.get('batch_mask')
 
-  if classifier == "separate": 
-    #because they will be fed to softmax, make the values that you dont want to use 
-    #close to -inf, so they disappear and do not affect the loss
-    transformed_logits = jnp.where(batch["domain_mask"],transformed_logits,jnp.finfo('float32').min)
-  
   # This psum is required to correctly evaluate with multihost. Only host 0
   # will report the metrics, so we must aggregate across all hosts. The psum
   # will map an array of shape [n_global_devices, batch_size] -> [batch_size]
   # by summing across the devices dimension. The outer sum then sums across the
   # batch dim. The result is then we have summed across all samples in the
   # sharded batch.
-  
+
   #logits for prec@1, transformed logits for loss
   evaluated_metrics = {
-    
-      'classifier_prec@1': model_utils.psum_metric_normalizer(
-          (
-              model_utils.weighted_top_one_correctly_classified(
-                  logits, multihot_target, weights
-              ),
-              model_utils.num_examples(logits, multihot_target, weights),
-          ),
-          axis_name=axis_name,
+  
+    'classifier_prec@1': model_utils.psum_metric_normalizer(
+      (
+        model_utils.weighted_top_one_correctly_classified(
+            logits, multihot_target, weights
+        ),
+        model_utils.num_examples(logits, multihot_target, weights),
       ),
+      axis_name=axis_name,
+    ),
 
-      #the loss is masked if we use domain masks
-      'classifier_loss': model_utils.psum_metric_normalizer(
-          (
-              model_utils.weighted_unnormalized_softmax_cross_entropy(
-                  transformed_logits, multihot_target, weights
-              ),
-              model_utils.num_examples(
-                  transformed_logits, multihot_target, weights
-              ),
-          ),
-          axis_name=axis_name,
+    #the loss is masked if we use domain masks
+    'classifier_loss': model_utils.psum_metric_normalizer(
+      (
+        model_utils.weighted_unnormalized_softmax_cross_entropy(
+            transformed_logits, multihot_target, weights
+        ),
+        model_utils.num_examples(
+            transformed_logits, multihot_target, weights
+        ),
       ),
+      axis_name=axis_name,
+    ),
   }
 
   return evaluated_metrics
@@ -143,11 +137,11 @@ class UniversalEmbeddingClassificationModel(
     """
     del split  # For all splits, we return the same metric functions.
     return functools.partial(
-        classification_metrics_function,
-        target_is_multihot=self.dataset_meta_data.get(
-            'target_is_onehot', False
-        ),
-        loss_config=self.config.loss, #comment this out?
+      classification_metrics_function,
+      target_is_multihot=self.dataset_meta_data.get(
+        'target_is_onehot', False
+      ),
+      loss_config=self.config.loss, #comment this out?
     )
 
 
@@ -156,8 +150,7 @@ class UniversalEmbeddingClassificationModel(
       self,
       outputs: Dict,
       batch: base_model.Batch,
-      model_params: Optional[jnp.array] = None,
-      classifier = "separate",
+      model_params: Optional[jnp.array] = None, #optionally for regularization purposes
   ) -> float:
     """Returns the softmax loss.
 
@@ -178,24 +171,11 @@ class UniversalEmbeddingClassificationModel(
 
     #transform based on type of softmax margin loss
     transformed_logits = loss_utils._transform_logits(logits, one_hot_targets, self.config.loss)
-    
-    if classifier == "separate":
 
-      transformed_masked_logits = jnp.where(batch["domain_mask"],transformed_logits,jnp.finfo('float32').min)
-      sof_ce_loss = model_utils.weighted_softmax_cross_entropy(
-          transformed_masked_logits,
-          one_hot_targets,
-          label_smoothing=self.config.get('label_smoothing'),
-      )
+    sof_ce_loss = model_utils.weighted_softmax_cross_entropy(
+      transformed_logits,
+      one_hot_targets,
+      label_smoothing=self.config.get('label_smoothing'),
+    )
 
-      return sof_ce_loss
-
-    elif classifier == "joint":
-
-      sof_ce_loss = model_utils.weighted_softmax_cross_entropy(
-          transformed_logits,
-          one_hot_targets,
-          label_smoothing=self.config.get('label_smoothing'),
-      )
-
-      return sof_ce_loss
+    return sof_ce_loss

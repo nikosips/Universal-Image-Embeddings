@@ -20,6 +20,8 @@ import numpy as np
 from collections import OrderedDict
 
 import universal_embedding.info_utils as info_utils
+from universal_embedding.dataset_infos import DATASET_INFO
+
 
 
 
@@ -49,248 +51,6 @@ UniversalEmbeddingKnnEvalDataset = collections.namedtuple(
     ],
 )
 
-
-#if any of the below 2 dicts' order changes, the other one has to change as well
-DOMAIN_LABELS = {
-    'cars': 0,
-    'sop': 1,
-    'inshop': 2,
-    'inat': 3,
-    'met': 4,
-    'gldv2': 5,
-    'food2k': 6,
-    'rp2k': 7,
-}
-
-
-invert_DOMAIN_LABELS = {
-    0: 'cars',
-    1: 'sop',
-    2: 'inshop',
-    3: 'inat',
-    4: 'met',
-    5: 'gldv2',
-    6: 'food2k',
-    7: 'rp2k',
-}
-
-
-DATASET_INFO = {
-    'cars': {
-        'domain': 0,
-        'train_files': 'cars/train/cars.train.tfrecord',
-        'test_files': 'cars/test/cars.test.tfrecord',
-        'val_files': 'cars/val/cars.val.tfrecord',
-
-        'num_train_classes': 78,
-        'num_train_examples': 6346,
-        'num_test_examples': 8131,
-        'num_val_examples': 1708,
-        'knn': {
-            'train_knn': {
-                'query': 'train',
-                'index': 'train',
-            },
-            'val_knn': {
-                'query': 'val',
-                'index': 'val',
-            },
-            'test_knn': {
-                'query': 'test',
-                'index': 'test',
-            },
-        },
-    },
-    'sop': {
-        'domain': 1,
-        'train_files': 'sop/train/sop.train.tfrecord',
-        'test_files': 'sop/test/sop.test.tfrecord',
-        'val_files': 'sop/val/sop.val.tfrecord',
-
-        'num_train_classes': 9054,
-        'num_train_examples': 48942,
-        'num_test_examples': 60502,
-        'num_val_examples': 10609,
-        'knn': {
-            'train_knn': {
-                'query': 'train',
-                'index': 'train',
-            },
-            'val_knn': {
-                'query': 'val',
-                'index': 'val',
-            },
-            'test_knn': {
-                'query': 'test',
-                'index': 'test',
-            },
-        },
-    },
-
-    'inshop': {
-        'domain': 2,
-        'train_files': 'inshop/train/inshop.train.tfrecord',
-        'test_files': 'inshop/test/inshop.test.tfrecord',
-        'val_files': 'inshop/val/inshop.val.tfrecord',
-        'index_files': 'inshop/index/inshop.index.tfrecord',  # size 12612
-
-        'num_train_classes': 3198,
-        'num_train_examples': 20897,
-        'num_test_examples': 14218,
-        'num_val_examples': 4982,
-        'knn': {
-            'train_knn': {
-                'query': 'train',
-                'index': 'train',
-            },
-            'val_knn': {
-                'query': 'val',
-                'index': 'val',
-            },
-            'test_knn': {
-                'query': 'test',
-                'index': 'index',
-            },
-        },
-    },
-
-    'inat': {
-        'domain': 3,
-        'train_files': 'inat/train/inat.train.tfrecord',
-        'test_files': 'inat/test/inat.test.tfrecord',
-        'val_files': 'inat/val/inat.val.tfrecord',
-
-        'num_train_classes': 4552,
-        'num_train_examples': 273929,
-        'num_test_examples': 136093,
-        'num_val_examples': 51917,
-        'knn': {
-            'train_knn': {
-                'query': 'train',
-                'index': 'train',
-            },
-            'val_knn': {
-                'query': 'val',
-                'index': 'val',
-            },
-            'test_knn': {
-                'query': 'test',
-                'index': 'test',
-            },
-        },
-    },
-
-    'met': {
-        'domain': 4,
-        'train_files': 'met/train/met.train.tfrecord',
-        'small_train_files': 'met/small_train/met.small_train.tfrecord',  # size 38307
-        'test_files': 'met/test/met.test.tfrecord',
-        'val_files': 'met/val/met.val.tfrecord',
-
-        'index_files': 'met/index/met.index.tfrecord', #same as train set
-        'small_index_files': 'met/small_index/met.small_index.tfrecord', #same as small train set
-
-        'num_train_classes': 224408,
-        'num_train_examples': 397121,
-        'num_test_examples': 1003,
-        'num_val_examples': 129,
-        'knn': {
-            'train_knn': {
-                'query': 'train',
-                'index': 'train',
-            },
-            'val_knn': {
-                'query': 'val',
-                'index': 'small_index',
-            },
-            'test_knn': {
-                'query': 'test',
-                'index': 'index',
-            },
-        },
-    },
-
-    'gldv2': {
-        'domain': 5,
-        'train_files': 'gldv2/train/gldv2.train.tfrecord',
-        'test_files': 'gldv2/test/gldv2.test.tfrecord',
-        'val_files': 'gldv2/val/gldv2.val.tfrecord',
-        'index_files': 'gldv2/index/gldv2.index.tfrecord',  # size 761757
-
-        'num_train_classes': 73182,
-        'num_train_examples': 1422914,
-        'num_test_examples': 1129,
-        'num_val_examples': 157556,
-        'knn': {
-            'train_knn': {
-                'query': 'train',
-                'index': 'train',
-            },
-            'val_knn': {
-                'query': 'val',
-                'index': 'val',
-            },
-            'test_knn': {
-                'query': 'test',
-                'index': 'index',
-            },
-        },
-    },
-
-    'food2k': {
-        'domain': 6,
-        'train_files': 'food2k/train/food2k.train.tfrecord',
-        'test_files': 'food2k/test/food2k.test.tfrecord',
-        'val_files': 'food2k/val/food2k.val.tfrecord',
-
-
-        'num_train_classes': 900,
-        'num_train_examples': 472349,
-        'num_test_examples': 9979,
-        'num_val_examples': 49323,
-        'knn': {
-            'train_knn': {
-                'query': 'train',
-                'index': 'train',
-            },
-            'val_knn': {
-                'query': 'val',
-                'index': 'val',
-            },
-            'test_knn': {
-                'query': 'test',
-                'index': 'test',
-            },
-        },
-    },
-
-    'rp2k': {
-        'domain': 7,
-        'train_files': 'rp2k/train/rp2k.train.tfrecord',
-        'test_files': 'rp2k/test/rp2k.test.tfrecord',
-        'val_files': 'rp2k/val/rp2k.val.tfrecord',
-
-
-        'num_train_classes': 1074,
-        'num_train_examples': 188724,
-        'num_test_examples': 10931,
-        'num_val_examples': 17185,
-        'knn': {
-            'train_knn': {
-                'query': 'train',
-                'index': 'train',
-            },
-            'val_knn': {
-                'query': 'val',
-                'index': 'val',
-            },
-            'test_knn': {
-                'query': 'test',
-                'index': 'test',
-            },
-        },
-    },
-}
 
 
 def _normalize_image(
@@ -384,7 +144,6 @@ def preprocess_example(
   augment=False,
   dtype=tf.float32,
   label_offset=0,
-  domain_mask_range = None,
   domain_idx = -1,
   normalization_statistics = None,
 ):
@@ -421,15 +180,11 @@ def preprocess_example(
   image = _normalize_image(image,normalization_statistics)
   image = tf.image.convert_image_dtype(image, dtype=dtype)
 
-  domain_mask = np.full((total_classes),False)
-  domain_mask[domain_mask_range[0]:domain_mask_range[1]] = True
-
   return {
     'inputs': image,
     'label': features['class_id'] + label_offset,
     'domain': domain,
-    'domain_mask': domain_mask,
-    'domain_idx': domain_idx,
+    'domain_idx': domain_idx, #is this and the above even needed? I can get them from the sampler anyways? TODO: fix
   }
 
 
@@ -440,7 +195,6 @@ def preprocess_example_eval(
   domain,
   augment=False,
   dtype=tf.float32,
-  domain_mask_range = None,
   domain_idx = -1,
   normalization_statistics = None,
 ):
@@ -475,13 +229,9 @@ def preprocess_example_eval(
   image = _normalize_image(image,normalization_statistics)
   image = tf.image.convert_image_dtype(image, dtype=dtype)
 
-  domain_mask = np.full((total_classes),False)
-  domain_mask[domain_mask_range[0]:domain_mask_range[1]] = True
-
   return {
     'inputs': image,
     'domain': domain,
-    'domain_mask': domain_mask,
     'domain_idx': domain_idx,
   }
 
@@ -495,7 +245,6 @@ def load_tfrecords(
     augment=False,
     parallel_reads=4,
     label_offset=0,
-    domain_mask_range = None,
     domain_idx = -1,
     **dataset_kwargs,
 ):
@@ -560,7 +309,6 @@ def load_tfrecords(
         domain=DATASET_INFO[dataset_name]['domain'],
         domain_idx=domain_idx,
         augment=augment,
-        domain_mask_range = domain_mask_range,
         normalization_statistics = normalization_statistics,
       )
 
@@ -574,7 +322,6 @@ def load_tfrecords(
         domain_idx=domain_idx,
         augment=augment,
         label_offset=label_offset,
-        domain_mask_range = domain_mask_range,
         normalization_statistics = normalization_statistics,
       )
 
@@ -724,16 +471,15 @@ def build_universal_embedding_dataset_new(
   for i in range(len(dataset_names)):
   
     new_ds = load_tfrecords(
-        base_dir,
-        dataset_names[i],
-        split,
-        total_classes,
-        parallel_reads=4,
-        augment=augment,
-        label_offset=offset,
-        domain_mask_range=(offset,offset + DATASET_INFO[dataset_names[i]]['num_train_classes']),
-        domain_idx=i,
-        **dataset_kwargs,
+      base_dir,
+      dataset_names[i],
+      split,
+      total_classes,
+      parallel_reads=4,
+      augment=augment,
+      label_offset=offset,
+      domain_idx=i,
+      **dataset_kwargs,
     )
 
     offset += DATASET_INFO[dataset_names[i]]['num_train_classes']
@@ -839,24 +585,23 @@ def get_training_dataset(
     3,
   )
 
-  num_train_examples, num_test_examples, num_val_examples, num_classes = (
-    0,
-    0,
+  num_train_examples, num_classes = (
     0,
     0,
   )
 
   dataset_samples = OrderedDict()
+  classes_per_dataset = OrderedDict()
 
   for name in dataset_names:
     num_train_examples += DATASET_INFO[name]['num_train_examples']
-    num_test_examples += DATASET_INFO[name]['num_test_examples']
-    num_val_examples += DATASET_INFO[name]['num_val_examples']
     num_classes += DATASET_INFO[name]['num_train_classes']
     dataset_samples[name] = DATASET_INFO[name]['num_train_examples']
+    classes_per_dataset[name] = DATASET_INFO[name]['num_train_classes']
 
 
-  domain_indices = [DATASET_INFO[dat_name]["domain"] for dat_name in dataset_names]
+  #doesn't follow the order of the train config file and therefore of the batch_domain_idx
+  domain_indices = [DATASET_INFO[dataset_name]["domain"] for dataset_name in dataset_names]
 
   meta_data = {
     'dataset_name': dataset_name,
@@ -864,11 +609,10 @@ def get_training_dataset(
     'num_classes': num_classes,
     'input_shape': input_shape,
     'num_train_examples': num_train_examples,
-    'num_test_examples': num_test_examples,
-    'num_val_examples': num_val_examples,
     'input_dtype': getattr(jnp, config.data_dtype_str),
     'target_is_onehot': False,
     'dataset_samples': dataset_samples,
+    'classes_per_dataset': classes_per_dataset,
   }
 
   return UniversalEmbeddingTrainingDataset(
@@ -987,7 +731,7 @@ def get_knn_eval_datasets(
 
       json_data["paths"] = paths
       json_data["labels"] = labels
-      json_data["domains"] = [DOMAIN_LABELS[dataset_name] for _ in range(len(labels))]
+      json_data["domains"] = [DATASET_INFO[dataset_name]['domain'] for _ in range(len(labels))]
 
       knn_info['json_data'][dataset_lookup_key(dataset_name, split)] = json_data
 
@@ -1006,7 +750,6 @@ def get_knn_eval_datasets(
     'top_k': int(config.top_k),
     'size_info': size_info,
   }
-
 
   return UniversalEmbeddingKnnEvalDataset(
     knn_info,

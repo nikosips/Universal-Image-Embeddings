@@ -163,6 +163,7 @@ def train(
     axis_name='batch',
     # We can donate both buffers of train_state and train_batch.
     donate_argnums=(0, 1),
+    static_broadcasted_argnums=(2), #to pass batch_dataset_idx
   )
 
   representation_fn_knn = functools.partial(
@@ -231,6 +232,7 @@ def train(
       train_state, t_metrics, t_logs = train_step_pmapped(
         train_state,
         train_batch,
+        int(batch_dataset_idx),
       )
 
       # This will accumulate metrics in TPU memory up to the point that we log

@@ -16,7 +16,8 @@ def get_config():
 
   #values below here overwrite those of training config that are the default ones
 
-  config.embedd_to_eval = "projected"
+  #config.embedd_to_eval = "projected"
+  config.embedd_to_eval = "backbone_out"
 
   config.knn_eval_names = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
   

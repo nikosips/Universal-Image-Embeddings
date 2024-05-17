@@ -647,6 +647,7 @@ def load_tfrecords(
 
 def load_dir_dataset(
     base_dir,
+    list_of_paths,
     augment=False,
     parallel_reads=4,
     **dataset_kwargs,
@@ -665,27 +666,19 @@ def load_dir_dataset(
     n_validation_shards is 0, the validation dataset will be None.
   """
 
+  if list_of_paths is not None:
 
-  # data = tf.data.Dataset.list_files(base_dir + "/*",shuffle = False)
-  # #different generator
-  # data2 = tf.data.Dataset.list_files(base_dir + "/*",shuffle = False)
+    data=tf.data.Dataset.from_tensor_slices(list_of_paths)
+    paths = list_of_paths
 
-  # paths = [x.numpy().decode('utf-8') for x in data2]
+  else: 
 
+    data = tf.data.Dataset.list_files(base_dir + "/*",shuffle = False)
+    #different generator to not consume first
+    data2 = tf.data.Dataset.list_files(base_dir + "/*",shuffle = False)
 
-  ####################
-  with open(os.path.join(base_dir, 'test_gallery.txt')) as fid:
-  #with open(os.path.join(base_dir, 'test_query.txt')) as fid:    
-    db_lines = fid.read().splitlines()
+    paths = [x.numpy().decode('utf-8') for x in data2]
 
-  db_lines = [os.path.join(base_dir, x.split(',')[0]) for x in db_lines] 
-
-  data=tf.data.Dataset.from_tensor_slices(db_lines)
-  ####################
-  #import ipdb; ipdb.set_trace()
-
-
-  paths = db_lines
 
 
   if 'clip' in dataset_kwargs["config"].model_class:
@@ -1191,6 +1184,7 @@ def get_knn_eval_datasets(
 def get_extract_dataset(
     config,
     base_dir,
+    list_of_paths,
     eval_batch_size: int,
     prefetch_buffer_size: Optional[int] = 2,
 ):
@@ -1232,6 +1226,7 @@ def get_extract_dataset(
     batch_size=local_eval_batch_size,
     base_dir = base_dir,
     config = config,
+    list_of_paths = list_of_paths,
   )
 
   extract_iter = build_ds_iter(

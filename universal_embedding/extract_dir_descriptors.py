@@ -21,9 +21,8 @@ from universal_embedding import datasets
 from universal_embedding import knn_utils
 from universal_embedding import models
 from universal_embedding import model_init
+from universal_embedding import utils
 
-
-test_path = "/mnt/data/vrg/public_datasets/met/test_met"
 
 def extract_dir_descriptors(
 	rng: jnp.ndarray,
@@ -34,36 +33,29 @@ def extract_dir_descriptors(
 
 	lead_host = jax.process_index() == 0
 
-	#dataset used for training
-	dataset_dict = datasets.get_training_dataset(config)
+	dataset_dict = datasets.get_extract_dataset(
+		config,
+		base_dir=config.base_dir,
+		eval_batch_size=config.get('eval_batch_size', config.batch_size),
+	)
 
 	model_cls = models.MODELS[config.model_class]
 	model = model_cls(config, dataset_dict.meta_data)
 
 	rng, init_rng = jax.random.split(rng)
 
-	# (params, model_state, num_trainable_params, gflops) = model_init.initialize_universal_model(
-	# 	dataset_dict,
-	# 	config,
-	# 	model,
-	# 	init_rng,
-	# )
-
-	# train_state = train_utils.TrainState(
-	# 	params=params,
-	# 	model_state=model_state
-	# )
-	
-	#dataset that will be used for extraction
-
-	extract_dataset = datasets.get_extract_dataset(
+	(params, model_state, num_trainable_params, gflops) = model_init.initialize_universal_model_for_extraction(
+		dataset_dict,
 		config,
-		base_dir=test_path,
-		eval_batch_size=config.get('eval_batch_size', config.batch_size),
+		model,
+		init_rng,
 	)
 
-	import ipdb; ipdb.set_trace()
-
+	train_state = train_utils.TrainState(
+		params=params,
+		model_state=model_state
+	)
+	
 	if config.pretrained_ckpt:
 
 		logging.info('Initializing from ckpt %s.', config.pretrained_ckpt)
@@ -71,13 +63,13 @@ def extract_dir_descriptors(
 		if config.model_class.startswith("clip_vit_with_embedding"):
 
 			train_state = model.load_model_vars(
-					train_state, config.pretrained_ckpt,
+				train_state, config.pretrained_ckpt,
 			)
 
 		elif config.model_class.startswith("vit_with_embedding"):
 
 			train_state = model.load_augreg_params(
-					train_state, config.pretrained_ckpt, config.model
+				train_state, config.pretrained_ckpt, config.model
 			)
 
 	train_state = jax_utils.replicate(train_state)
@@ -101,14 +93,13 @@ def extract_dir_descriptors(
 		config.get("extract_only_descrs",False),
 	)
 
-
 	train_dir = config.get('train_dir')
 
 	if config.test_pretrained_features:
 
 		descriptors = knn_evaluator._get_repr(      
-				train_state, 
-				dataloader,
+			train_state,
+			dataset_dict.extract_iter,
 		)
 
 	if config.only_best_knn:
@@ -143,8 +134,8 @@ def extract_dir_descriptors(
 			train_state = None
 
 		descriptors = knn_evaluator._get_repr(      
-				train_state, 
-				dataloader,
+			train_state, 
+			dataset_dict.extract_iter,
 		)
 
 	else:
@@ -181,11 +172,20 @@ def extract_dir_descriptors(
 				train_state = None
 
 			descriptors = knn_evaluator._get_repr(      
-					train_state, 
-					dataloader,
+				train_state, 
+				dataset_dict.extract_iter,
 			)
 
-	train_utils.barrier_across_hosts()
+
+	descriptors_dict = {
+		'descriptors': descriptors[0],
+		'paths': dataset_dict.meta_data['paths']
+	}
+
+	#save descriptors here
+	utils.save_descriptors(workdir+"/descriptors.json",descriptors_dict)
+
+	train_utils.barrier_across_hosts() #is this even needed?
 
 
 

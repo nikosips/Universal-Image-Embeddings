@@ -13,19 +13,45 @@ def initialize_universal_model(
 
   #keep in mind that model is initialized in one device
   (params, model_state, num_trainable_params, gflops) = (
-      train_utils.initialize_model(
-          model_def=model.flax_model,
-          input_spec=[(
-              dataset_dict.meta_data['input_shape'],
-              dataset_dict.meta_data.get('input_dtype', jnp.float32),
-          )],
-          config=config,
-          rngs=init_rng,
-          init=True,
-      )
+    train_utils.initialize_model(
+      model_def=model.flax_model,
+      input_spec=[(
+        dataset_dict.meta_data['input_shape'],  #TODO: change image size here #use always the one in the config
+        dataset_dict.meta_data.get('input_dtype', jnp.float32),
+      )],
+      config=config,
+      rngs=init_rng,
+      init=True,  
+    )
   )
 
   return (params, model_state, num_trainable_params, gflops)
+
+
+def initialize_universal_model_for_extraction(
+  dataset_dict,
+  config,
+  model,
+  init_rng,
+):
+
+  #keep in mind that model is initialized in one device
+  (params, model_state, num_trainable_params, gflops) = (
+    train_utils.initialize_model(
+      model_def=model.flax_model,
+      input_spec=[(
+        dataset_dict.meta_data['input_shape'],  #TODO: change image size here #use always the one in the config
+        dataset_dict.meta_data.get('input_dtype', jnp.float32),
+      )],
+      config=config,
+      rngs=init_rng,
+      init=True,  
+      return_feats=True, #the only difference with above is that we do not need classifier
+    )
+  )
+
+  return (params, model_state, num_trainable_params, gflops)
+
 
 
 def load_init_checkpoint(

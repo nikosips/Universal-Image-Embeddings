@@ -50,6 +50,17 @@ UniversalEmbeddingKnnEvalDataset = collections.namedtuple(
 )
 
 
+
+ExtractDataset = collections.namedtuple(
+    # Each instance of the Dataset.
+    'Extract_Dataset',
+    [
+        'extract_iter',
+        'meta_data',
+    ],
+)
+
+
 #if any of the below 2 dicts' order changes, the other one has to change as well
 DOMAIN_LABELS = {
     'cars': 0,
@@ -518,6 +529,7 @@ def preprocess_example_extract(
 
   return {
     'inputs': image,
+    #'path': example, #how to return path here?
   }
 
 
@@ -655,6 +667,11 @@ def load_dir_dataset(
   """
 
   data = tf.data.Dataset.list_files(base_dir + "/*",shuffle = False)
+  
+  #different generator
+  data2 = tf.data.Dataset.list_files(base_dir + "/*",shuffle = False)
+
+  paths = [x.numpy().decode('utf-8') for x in data2]
 
 
   if 'clip' in dataset_kwargs["config"].model_class:
@@ -682,7 +699,7 @@ def load_dir_dataset(
     num_parallel_calls=1, #could that be more than 1? will it have any problems with random order?
   )
 
-  return data
+  return data,paths
 
 
 
@@ -730,8 +747,10 @@ def build_extract_dir_dataset(
     if input_context:
       replica_batch_size = input_context.get_per_replica_batch_size(batch_size)
 
+    generator,paths = dataset_fn(**dataset_kwargs)
+
     #dataset_fn here is "build_universal_embedding_dataset_new"
-    return _shuffle_batch_prefetch(dataset_fn(**dataset_kwargs), replica_batch_size)
+    return _shuffle_batch_prefetch(generator, replica_batch_size),paths
 
 
   return _dataset_fn()
@@ -974,7 +993,7 @@ def get_training_dataset(
 
   input_shape = (
     -1,
-    IMAGE_SIZE,
+    IMAGE_SIZE, #todo: take this from the config
     IMAGE_SIZE,
     3,
   )
@@ -1194,7 +1213,7 @@ def get_extract_dataset(
     n_devices=num_local_shards,
   )
         
-  extract_ds = build_extract_dir_dataset(
+  extract_ds,paths = build_extract_dir_dataset(
     dataset_fn=load_dir_dataset,
     batch_size=local_eval_batch_size,
     base_dir = base_dir,
@@ -1208,4 +1227,23 @@ def get_extract_dataset(
     prefetch_buffer_size,
   )
 
-  return extract_iter
+  #TODO: check that with multiple gpus data dont get mixed
+
+  input_shape = (
+    -1,
+    IMAGE_SIZE, #todo: take this from the config
+    IMAGE_SIZE,
+    3,
+  )
+
+  meta_data = {
+    'input_shape': input_shape,
+    'num_classes': -1,
+    'input_dtype': getattr(jnp, config.data_dtype_str),
+    'paths' : paths,
+  }
+
+  return ExtractDataset(
+    extract_iter,
+    meta_data,
+  )

@@ -20,6 +20,7 @@ https://cmp.felk.cvut.cz/univ_emb/
 Keep in mind that you might need to modify the installation of Jax used depending on the type of your accelerator (CPU, GPU, TPU).
 6) clone the UnED repo: ```git clone https://github.com/nikosips/Universal-Image-Embeddings.git```
 7) ```cd Universal-Image-Embeddings```
+8) ```pip install wandb```
 
 
 ## Dataset preparation
@@ -229,7 +230,7 @@ New features will be added soon to make the use of the UnED dataset easier, as w
 ## TODO
 
 - Provide ICCV checkpoints for universal models (need to store the config files of training as well, because they will be needed to re-init the model)
-- Add descriptor extraction for a PyTorch ImageDir dataset
+- Add descriptor extraction for an ImageDir dataset
 - Support continuing training from a checkpoint
 - Update the knn script to newer version
 
@@ -254,4 +255,3 @@ If you use our work in yours, please cite us using the following:
 
 We appreciate the help of [Elias Ramzi](https://github.com/elias-ramzi) on making the repository easier to use and spotting some bugs that existed in the initial version. 
 Also, the repository is inspired by the codebase of [Poly-ViT](https://github.com/google-research/scenic/tree/main/scenic/projects/polyvit) .
-

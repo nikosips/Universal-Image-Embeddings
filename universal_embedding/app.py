@@ -86,16 +86,10 @@ def _run_main(
     train_config_params.update(FLAGS.config)
     FLAGS.config = train_config_params
 
-  elif descr_eval:
-
-    pass
-
-  else:
-    
-    utils.calc_train_dependent_config_values(FLAGS.config)
-
 
   if (not knn) and (not descr_eval): #save the training config
+
+    utils.calc_train_dependent_config_values(FLAGS.config) 
 
     with gfile.GFile(os.path.join(FLAGS.workdir,"config.json"), mode = "w") as f:
       
@@ -169,11 +163,11 @@ def _run_main(
     )
 
   except KeyboardInterrupt:
-      
-      if FLAGS.use_wandb:
-       wandb.finish()
-      
-      sys.exit()
+    
+    if FLAGS.use_wandb:
+      wandb.finish()
+    
+    sys.exit()
 
   if FLAGS.use_wandb:
     wandb.finish()

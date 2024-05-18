@@ -820,9 +820,6 @@ def knn_step(
     knn_evaluator.log_knn_summary(writer=writer, step=step, results=results)
 
   if config.save_descriptors:
-    # with gfile.GFile(descr_save_path, mode='wb') as data:
-    #   data.write(json.dumps(all_descriptors_dict,cls = utils.NumpyEncoder))
-    #   print(f"descriptors file complete: {descr_save_path}")
     utils.save_descriptors(descr_save_path,all_descriptors_dict)
 
   if config.save_neighbors:

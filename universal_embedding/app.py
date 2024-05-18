@@ -79,7 +79,9 @@ def _run_main(
   #here we should calculate all dependent parameters.
   #calculate config dependent values based on cmd line config args
 
-  if knn:
+
+
+  if knn: #case of knn or extract_dir_descriptors
 
     #dependent value, can't be evaluated in the config
     train_config_params = utils.read_config(os.path.join(FLAGS.config.train_dir,"config.json"))
@@ -126,6 +128,7 @@ def _run_main(
   )
   
   if jax.process_index() == 0:
+
     platform.work_unit().create_artifact(
       platform.ArtifactType.DIRECTORY,
       FLAGS.workdir, 

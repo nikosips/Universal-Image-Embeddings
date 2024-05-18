@@ -94,7 +94,8 @@ def extract_dir_descriptors(
 			train_state = model.load_augreg_params(
 				train_state, config.pretrained_ckpt, config.model
 			)
-
+	
+	train_state = train_state.replace(metadata={})
 	train_state = jax_utils.replicate(train_state)
 
 	del params
@@ -150,6 +151,7 @@ def extract_dir_descriptors(
 
 				sys.exit("no checkpoint found")
 
+			train_state = train_state.replace(metadata={})
 			train_state = jax_utils.replicate(train_state)
 
 		else:
@@ -188,6 +190,7 @@ def extract_dir_descriptors(
 
 					sys.exit("no checkpoint found")
 
+				train_state = train_state.replace(metadata={})
 				train_state = jax_utils.replicate(train_state)
 
 			else:

@@ -1167,10 +1167,22 @@ def get_knn_eval_datasets(
 
   knn_info['knn_setup'] = knn_setup
 
+
+  input_shape = (
+    -1,
+    IMAGE_SIZE, #todo: take this from the config
+    IMAGE_SIZE,
+    3,
+  )
+
+
   meta_data = {
+    'input_shape': input_shape,
     'dataset_names': ','.join(dataset_names),
     'top_k': int(config.top_k),
     'size_info': size_info,
+    'num_classes': -1,
+    'input_dtype': getattr(jnp, config.data_dtype_str),
   }
 
 

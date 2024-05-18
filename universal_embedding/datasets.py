@@ -482,7 +482,9 @@ def build_universal_embedding_dataset_new(
       **dataset_kwargs,
     )
 
-    offset += DATASET_INFO[dataset_names[i]]['num_train_classes']
+    if dataset_kwargs['config'].classifier=='joint':
+      offset += DATASET_INFO[dataset_names[i]]['num_train_classes']
+    
     ds_dict[dataset_names[i]]=new_ds
 
   return ds_dict

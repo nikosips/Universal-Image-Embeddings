@@ -105,17 +105,33 @@ Now that the data are ready, you are ready to train and evaluate embeddings on t
   Checkpoints, embeddings and event files are saved in ```YOUR_WORKDIR```.
 
   ```
-  python -m universal_embedding.main --config=universal_embedding/configs/config_train_vit.py --workdir=[YOUR_WORKDIR] --config.eval_dataset_dir='data/tfds' --config.train_dataset_dir='data/tfds' --config.info_files_dir='data/info_files' [optional wandb logging is supported. wandb flags are defined in app.py, please take a look there]
+  python -m universal_embedding.main \
+  --config=universal_embedding/configs/config_train_vit.py \
+  --workdir=[YOUR_WORKDIR] \
+  --config.eval_dataset_dir=data/tfds \
+  --config.train_dataset_dir=data/tfds \
+  --config.info_files_dir=data/info_files \
+  --wandb_project [WANDB PROJECT NAME] \
+  --wandb_group [WANDB GROUP NAME] \
+  --wandb_entity [WANDB ENTITY NAME] \
+  --wandb_name [WANDB EXPERIMENT NAME] \
+  --use_wandb 
   ```
 
 * <b>Evaluation of embeddings trained with this repository</b>
 
   Configure the "config_knn_vit.py" to the type of evaluation you want to perform.
-  Configure config.train_dir in the config file to the directory that the checkpoint of the training is saved.
+  Configure config.train_dir in the config file to the directory that the checkpoint of the training is saved (the config.json of the training must also exist there).
   Descriptors and event files are saved in ```YOUR_WORKDIR```.
 
   ```
-  python -m universal_embedding.knn_main --config=universal_embedding/configs/config_knn_vit.py --workdir=[YOUR_WORKDIR] --config.eval_dataset_dir='data/tfds' --config.train_dataset_dir='data/tfds' --config.info_files_dir='data/info_files'
+  python -m universal_embedding.knn_main \
+  --config=universal_embedding/configs/config_knn_vit.py \
+  --workdir=[YOUR_WORKDIR] \
+  --config.eval_dataset_dir=data/tfds \
+  --config.train_dataset_dir=data/tfds \
+  --config.info_files_dir=data/info_files \
+  --config.train_dir=[MODEL TRAIN DIR]
   ```
 
 
@@ -125,7 +141,13 @@ Now that the data are ready, you are ready to train and evaluate embeddings on t
   Event files are saved in ```YOUR_WORKDIR```.
 
   ```
-  python -m universal_embedding.descr_eval --config=universal_embedding/configs/config_descr_eval.py --workdir=[YOUR_WORKDIR] --config.eval_dataset_dir='data/tfds' --config.train_dataset_dir='data/tfds' --config.info_files_dir='data/info_files' --config.descr_path=[YOUR_EMBEDDINGS_PATH]
+  python -m universal_embedding.descr_eval \
+  --config=universal_embedding/configs/config_descr_eval.py \
+  --workdir=[YOUR_WORKDIR] \
+  --config.eval_dataset_dir=data/tfds \
+  --config.train_dataset_dir=data/tfds \
+  --config.info_files_dir=data/info_files \
+  --config.descr_path=[DESCRIPTORS PATH]
   ```      
 
 
@@ -233,6 +255,7 @@ New features will be added soon to make the use of the UnED dataset easier, as w
 - Add descriptor extraction for an ImageDir dataset
 - Support continuing training from a checkpoint
 - Update the knn script to newer version
+- remove the dependency on the uned dataset for descr_eval.py
 
 ## Citation
 

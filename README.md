@@ -255,7 +255,7 @@ New features will be added soon to make the use of the UnED dataset easier, as w
 - Add descriptor extraction for an ImageDir dataset
 - Support continuing training from a checkpoint
 - Update the knn script to newer version
-- remove the dependency on the uned dataset for descr_eval.py
+- remove the dependency on the uned dataset tfdses for descr_eval.py
 
 ## Citation
 

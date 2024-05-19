@@ -103,6 +103,9 @@ Now that the data are ready, you are ready to train and evaluate embeddings on t
 
   Configure the "config_train_vit.py" to the type of training you want to perform.
   Checkpoints, embeddings and event files are saved in ```YOUR_WORKDIR```.
+  Wandb flags are optional if you want to log training and validation metrics to 
+  wandb, otherwise, you can view them in tensorboard, through the event file
+  that is saved in the workdir.
 
   ```
   python -m universal_embedding.main \
@@ -133,7 +136,6 @@ Now that the data are ready, you are ready to train and evaluate embeddings on t
   --config.info_files_dir=data/info_files \
   --config.train_dir=[MODEL TRAIN DIR]
   ```
-
 
 * <b>Evaluation of your own embeddings on the UnED dataset</b>
 

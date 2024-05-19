@@ -33,7 +33,7 @@ def extract_dir_descriptors(
 
 	lead_host = jax.process_index() == 0
 
-	list_of_paths=None #give a list of paths to extract from instead
+	list_of_paths=None #use this with a list of paths to extract from custom non image-folder datasets
 
 	dataset_dict = datasets.get_extract_dataset(
 		config,

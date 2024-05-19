@@ -61,6 +61,7 @@ def initialize_universal_model_for_extraction(
       rngs=init_rng,
       init=True,  
       return_feats=True, #the only difference with above is that we do not need classifier
+      domain=-1, #domain agnostic
     )
   )
 

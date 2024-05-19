@@ -167,9 +167,6 @@ class ClipVisionTransformer(nn.Module):
     return_feats: bool = False,
     project_feats: bool = True,
   ) -> jnp.ndarray:
-  
-
-    current_dataset=self.dataset_meta_data["dataset_name"].split(",")[domain]
 
     outputs = {}
     outputs['embeddings'] = {}
@@ -226,6 +223,8 @@ class ClipVisionTransformer(nn.Module):
 
 
     if not return_feats:  # pass through classification layer
+      
+      current_dataset=self.dataset_meta_data["dataset_name"].split(",")[domain]
       
       #add classifier to new file
       if self.config.classifier=="separate":

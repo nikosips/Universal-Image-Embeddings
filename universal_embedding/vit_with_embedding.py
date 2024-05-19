@@ -54,9 +54,6 @@ class ViTWithEmbedding(vit.ViT):
     project_feats: bool = True,
   ):
 
-    if train or init:
-      current_dataset=self.dataset_meta_data["dataset_name"].split(",")[domain]
-
     outputs = {}
     outputs['embeddings'] = {}
 
@@ -123,7 +120,9 @@ class ViTWithEmbedding(vit.ViT):
 
 
     if not return_feats: # pass through classification layer #(can be replaced with if train or init?)
-
+      
+      current_dataset=self.dataset_meta_data["dataset_name"].split(",")[domain]
+      
       #add classifier to new file
       if self.config.classifier=="separate":
         classifier_domain=domain

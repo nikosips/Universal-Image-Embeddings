@@ -13,8 +13,8 @@ def get_config():
   config.experiment_name = 'universal-embedding-vit'
 
   # Dataset.
-  config.dataset_name = "cars"
-  config.knn_eval_names = "cars"
+  config.dataset_name = "cars,sop"
+  config.knn_eval_names = "cars,sop"
 
   # config.dataset_name = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
   # config.knn_eval_names = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"

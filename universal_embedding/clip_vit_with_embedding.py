@@ -1,6 +1,8 @@
 import functools
 from typing import Optional, Mapping, Any
 
+import ml_collections
+
 import flax
 import flax.linen as nn
 import jax
@@ -149,18 +151,26 @@ class ClipVisionTransformer(nn.Module):
   num_classes: int
   use_underscore_module_name: bool = False
   output_dim: int = -1
+  
+  dataset_meta_data: Any = None
+  config: ml_collections.ConfigDict = None
 
   @nn.compact
   def __call__(
-      self,
-      x: jnp.ndarray,
-      train: bool,
-      init: bool = False,
-      debug: bool = False,
-      return_feats: bool = False,
-      project_feats: bool = True,
+    self,
+    x: jnp.ndarray,
+    domain: int,
+    *,
+    train: bool,
+    init: bool = False,
+    debug: bool = False,
+    return_feats: bool = False,
+    project_feats: bool = True,
   ) -> jnp.ndarray:
   
+
+    current_dataset=self.dataset_meta_data["dataset_name"].split(",")[domain]
+
     outputs = {}
     outputs['embeddings'] = {}
 
@@ -216,18 +226,28 @@ class ClipVisionTransformer(nn.Module):
 
 
     if not return_feats:  # pass through classification layer
+      
+      #add classifier to new file
+      if self.config.classifier=="separate":
+        classifier_domain=domain
+        classifier_num_classes=self.dataset_meta_data['classes_per_dataset'][current_dataset]
+      elif self.config.classifier=="joint":
+        classifier_domain=0 #1 "domain" for all that will contain the sum of the classes
+        classifier_num_classes=self.num_classes#sum classes
+
       x = nn.Dense(
-          self.num_classes,
-          use_bias=False,
-          kernel_init=nn.initializers.lecun_uniform(),
-          name='output_projection',
+        classifier_num_classes,
+        use_bias=False,
+        kernel_init=nn.initializers.lecun_uniform(),
+        name=f'output_projection_{classifier_domain}',
       )(x)
       weights_norms = jnp.linalg.norm(
-          self.variables['params']['output_projection']['kernel'], axis=0
+        self.variables['params'][f'output_projection_{classifier_domain}']['kernel'], axis=0
       )  # norms of class prototypes
       x /= weights_norms
 
       outputs['classifier']['logits'] = x
+
 
     return outputs
 
@@ -270,6 +290,10 @@ class ViTWithEmbeddingClassificationModel(
   # overriding the method of scenic
   def build_flax_model(self) -> nn.Module:
     return ClipVisionTransformer(
+
+        dataset_meta_data=self.dataset_meta_data,
+        config=self.config,
+
         patch_size=self.config.model.patches.size[0],
         features=self.config.model.hidden_size,
         num_layers=self.config.model.num_layers,

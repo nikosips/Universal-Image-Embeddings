@@ -36,6 +36,7 @@ LrFn = Callable[[jnp.ndarray], jnp.ndarray]
 def train_step(
     train_state: train_utils.TrainState,
     batch: Batch,
+    batch_domain_idx: int, #always clean batches
     *,
     flax_model: nn.Module,
     loss_fn: LossFn,
@@ -94,6 +95,7 @@ def train_step(
     outputs, new_model_state = flax_model.apply(
       variables,
       batch['inputs'],
+      domain = batch_domain_idx,
       mutable=['batch_stats'],
       train=True,
       rngs={'dropout': dropout_rng},
@@ -104,7 +106,6 @@ def train_step(
       outputs, 
       batch, 
       variables['params'], 
-      classifier = config.classifier,
     )
     
     return loss, (new_model_state, outputs)
@@ -142,15 +143,14 @@ def train_step(
   metrics = metrics_fn(
     outputs, 
     batch, 
-    classifier = config.classifier,
   )
   
   new_train_state = train_state.replace(
-      global_step=train_state.global_step + 1,
-      opt_state=new_opt_state,
-      params=new_params,
-      model_state=new_model_state,
-      rng=new_rng,
+    global_step=train_state.global_step + 1,
+    opt_state=new_opt_state,
+    params=new_params,
+    model_state=new_model_state,
+    rng=new_rng,
   )
 
   return new_train_state, metrics, training_logs
@@ -186,9 +186,10 @@ def representation_fn_eval(
   outputs = flax_model.apply(
     variables, 
     batch['inputs'],
+    domain = -1, #domain agnostic feature extraction
     train=False,
-    return_feats = True,
-    debug=False, 
+    return_feats=True, #do not use classifier
+    debug=False,
     project_feats = project_feats,
   )
 

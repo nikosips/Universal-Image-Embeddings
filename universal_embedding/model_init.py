@@ -3,6 +3,10 @@ import logging
 import jax.numpy as jnp
 from scenic.train_lib import train_utils
 
+from collections import OrderedDict
+
+
+
 
 def initialize_universal_model(
   dataset_dict,
@@ -11,17 +15,27 @@ def initialize_universal_model(
   init_rng,
 ):
 
-  #keep in mind that model is initialized in one device
+  dataset_names = dataset_dict.meta_data['dataset_name'].split(",")
+  input_spec = OrderedDict()
+
+  for i,_ in enumerate(dataset_names):
+
+    input_spec_key = (
+      ('domain', i),
+      ('init', True),
+    )
+
+    input_spec[input_spec_key] = [(
+      dataset_dict.meta_data['input_shape'],
+      dataset_dict.meta_data.get('input_dtype', jnp.float32),
+    )]
+
   (params, model_state, num_trainable_params, gflops) = (
-    train_utils.initialize_model(
+    train_utils.initialize_multitask_model(
       model_def=model.flax_model,
-      input_spec=[(
-        dataset_dict.meta_data['input_shape'],  #TODO: change image size here #use always the one in the config
-        dataset_dict.meta_data.get('input_dtype', jnp.float32),
-      )],
+      input_spec=input_spec,          
       config=config,
       rngs=init_rng,
-      init=True,  
     )
   )
 
@@ -76,13 +90,13 @@ def load_init_checkpoint(
     if config.model_class.startswith("clip_vit_with_embedding"):
 
       train_state = model.load_model_vars(
-          train_state, config.pretrained_ckpt,
+        train_state, config.pretrained_ckpt,
       )
 
     elif config.model_class.startswith("vit_with_embedding"):
 
       train_state = model.load_augreg_params(
-          train_state, config.pretrained_ckpt, config.model
+        train_state, config.pretrained_ckpt, config.model
       )
 
   return train_state

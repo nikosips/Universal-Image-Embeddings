@@ -20,6 +20,7 @@ https://cmp.felk.cvut.cz/univ_emb/
 Keep in mind that you might need to modify the installation of Jax used depending on the type of your accelerator (CPU, GPU, TPU).
 6) clone the UnED repo: ```git clone https://github.com/nikosips/Universal-Image-Embeddings.git```
 7) ```cd Universal-Image-Embeddings```
+8) ```pip install wandb```
 
 
 ## Dataset preparation
@@ -102,21 +103,39 @@ Now that the data are ready, you are ready to train and evaluate embeddings on t
 
   Configure the "config_train_vit.py" to the type of training you want to perform.
   Checkpoints, embeddings and event files are saved in ```YOUR_WORKDIR```.
+  Wandb flags are optional if you want to log training and validation metrics to 
+  wandb, otherwise, you can view them in tensorboard, through the event file
+  that is saved in the workdir.
 
   ```
-  python -m universal_embedding.main --config=universal_embedding/configs/config_train_vit.py --workdir=[YOUR_WORKDIR] --config.eval_dataset_dir='data/tfds' --config.train_dataset_dir='data/tfds' --config.info_files_dir='data/info_files' [optional wandb logging is supported. wandb flags are defined in app.py, please take a look there]
+  python -m universal_embedding.main \
+  --config=universal_embedding/configs/config_train_vit.py \
+  --workdir=[YOUR_WORKDIR] \
+  --config.eval_dataset_dir=data/tfds \
+  --config.train_dataset_dir=data/tfds \
+  --config.info_files_dir=data/info_files \
+  --wandb_project [WANDB PROJECT NAME] \
+  --wandb_group [WANDB GROUP NAME] \
+  --wandb_entity [WANDB ENTITY NAME] \
+  --wandb_name [WANDB EXPERIMENT NAME] \
+  --use_wandb 
   ```
 
 * <b>Evaluation of embeddings trained with this repository</b>
 
   Configure the "config_knn_vit.py" to the type of evaluation you want to perform.
-  Configure config.train_dir in the config file to the directory that the checkpoint of the training is saved.
+  Configure config.train_dir in the config file to the directory that the checkpoint of the training is saved (the config.json of the training must also exist there).
   Descriptors and event files are saved in ```YOUR_WORKDIR```.
 
   ```
-  python -m universal_embedding.knn_main --config=universal_embedding/configs/config_knn_vit.py --workdir=[YOUR_WORKDIR] --config.eval_dataset_dir='data/tfds' --config.train_dataset_dir='data/tfds' --config.info_files_dir='data/info_files'
+  python -m universal_embedding.knn_main \
+  --config=universal_embedding/configs/config_knn_vit.py \
+  --workdir=[YOUR_WORKDIR] \
+  --config.eval_dataset_dir=data/tfds \
+  --config.train_dataset_dir=data/tfds \
+  --config.info_files_dir=data/info_files \
+  --config.train_dir=[MODEL TRAIN DIR]
   ```
-
 
 * <b>Evaluation of your own embeddings on the UnED dataset</b>
 
@@ -124,7 +143,13 @@ Now that the data are ready, you are ready to train and evaluate embeddings on t
   Event files are saved in ```YOUR_WORKDIR```.
 
   ```
-  python -m universal_embedding.descr_eval --config=universal_embedding/configs/config_descr_eval.py --workdir=[YOUR_WORKDIR] --config.eval_dataset_dir='data/tfds' --config.train_dataset_dir='data/tfds' --config.info_files_dir='data/info_files' --config.descr_path=[YOUR_EMBEDDINGS_PATH]
+  python -m universal_embedding.descr_eval \
+  --config=universal_embedding/configs/config_descr_eval.py \
+  --workdir=[YOUR_WORKDIR] \
+  --config.eval_dataset_dir=data/tfds \
+  --config.train_dataset_dir=data/tfds \
+  --config.info_files_dir=data/info_files \
+  --config.descr_path=[DESCRIPTORS PATH]
   ```      
 
 
@@ -229,9 +254,10 @@ New features will be added soon to make the use of the UnED dataset easier, as w
 ## TODO
 
 - Provide ICCV checkpoints for universal models (need to store the config files of training as well, because they will be needed to re-init the model)
-- Add descriptor extraction for a PyTorch ImageDir dataset
+- Add descriptor extraction for an ImageDir dataset
 - Support continuing training from a checkpoint
 - Update the knn script to newer version
+- remove the dependency on the uned dataset tfdses for descr_eval.py
 
 ## Citation
 
@@ -254,4 +280,3 @@ If you use our work in yours, please cite us using the following:
 
 We appreciate the help of [Elias Ramzi](https://github.com/elias-ramzi) on making the repository easier to use and spotting some bugs that existed in the initial version. 
 Also, the repository is inspired by the codebase of [Poly-ViT](https://github.com/google-research/scenic/tree/main/scenic/projects/polyvit) .
-

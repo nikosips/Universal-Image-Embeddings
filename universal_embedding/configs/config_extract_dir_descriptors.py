@@ -1,7 +1,7 @@
 import ml_collections, os
 
 
-
+#TODO: change image size here
 
 def get_config():
 
@@ -9,14 +9,15 @@ def get_config():
 
   config = ml_collections.ConfigDict()
 
-  config.train_dir = ""
+  config.train_dir = "" #dir containing checkpoint and train config
+  config.base_dir = ""
 
   # kNN configs
 
   #values below here overwrite those of training config that are the default ones
 
-  config.embedd_to_eval = "projected"
-  #config.embedd_to_eval = "backbone_out"
+  #config.embedd_to_eval = "projected"
+  config.embedd_to_eval = "backbone_out"
 
   config.knn_eval_names = "food2k,cars,sop,inshop,inat,met,gldv2,rp2k"
   
@@ -64,7 +65,7 @@ def get_config():
 
   config.info_files_dir = ''
 
-  #config.descr_save_path = "."
-  config.descr_save_path = None
+  config.descr_save_path = "." #which one is the workdir?
+  #config.descr_save_path = None
 
   return config

@@ -21,11 +21,10 @@ from universal_embedding import datasets
 from universal_embedding import knn_utils
 from universal_embedding import models
 from universal_embedding import model_init
+from universal_embedding import utils
 
 
-
-
-def knn_evaluate(
+def extract_dir_descriptors(
 	rng: jnp.ndarray,
 	config: ml_collections.ConfigDict,
 	workdir: str,
@@ -34,11 +33,13 @@ def knn_evaluate(
 
 	lead_host = jax.process_index() == 0
 
-	dataset_dict = datasets.get_knn_eval_datasets(
+	list_of_paths=None #use this with a list of paths to extract from custom non image-folder datasets
+
+	dataset_dict = datasets.get_extract_dataset(
 		config,
-		config.eval_dataset_dir, 
-		config.knn_eval_names,
-		config.get('eval_batch_size', config.batch_size),
+		base_dir=config.base_dir,
+		list_of_paths=list_of_paths, #make it work with list of paths instead if given properly #one has to take care of it himself
+		eval_batch_size=config.get('eval_batch_size', config.batch_size),
 	)
 
 	model_cls = models.MODELS[config.model_class]
@@ -57,7 +58,7 @@ def knn_evaluate(
 		params=params,
 		model_state=model_state
 	)
-
+	
 	if config.pretrained_ckpt:
 
 		logging.info('Initializing from ckpt %s.', config.pretrained_ckpt)
@@ -65,15 +66,15 @@ def knn_evaluate(
 		if config.model_class.startswith("clip_vit_with_embedding"):
 
 			train_state = model.load_model_vars(
-					train_state, config.pretrained_ckpt,
+				train_state, config.pretrained_ckpt,
 			)
 
 		elif config.model_class.startswith("vit_with_embedding"):
 
 			train_state = model.load_augreg_params(
-					train_state, config.pretrained_ckpt, config.model
+				train_state, config.pretrained_ckpt, config.model
 			)
-
+	
 	train_state = train_state.replace(metadata={})
 	train_state = jax_utils.replicate(train_state)
 
@@ -96,19 +97,13 @@ def knn_evaluate(
 		config.get("extract_only_descrs",False),
 	)
 
-
 	train_dir = config.get('train_dir')
 
 	if config.test_pretrained_features:
 
-		knn_utils.knn_step(
-			knn_evaluator,
+		descriptors = knn_evaluator._get_repr(      
 			train_state,
-			config,
-			train_dir,
-			0,
-			writer,
-			config.preextracted,
+			dataset_dict.extract_iter,
 		)
 
 	if config.only_best_knn:
@@ -143,14 +138,9 @@ def knn_evaluate(
 
 			train_state = None
 
-		knn_utils.knn_step(
-			knn_evaluator,
-			train_state,
-			config,
-			train_dir,
-			step,
-			writer,
-			config.preextracted,
+		descriptors = knn_evaluator._get_repr(      
+			train_state, 
+			dataset_dict.extract_iter,
 		)
 
 	else:
@@ -187,19 +177,23 @@ def knn_evaluate(
 
 				train_state = None
 
-			knn_utils.knn_step(
-				knn_evaluator,
-				train_state,
-				config,
-				train_dir,
-				step,
-				writer,
-				config.preextracted,
+			descriptors = knn_evaluator._get_repr(      
+				train_state, 
+				dataset_dict.extract_iter,
 			)
 
-	train_utils.barrier_across_hosts()
+
+	descriptors_dict = {
+		'descriptors': descriptors[0],
+		'paths': dataset_dict.meta_data['paths']
+	}
+
+	#save descriptors here
+	utils.save_descriptors(workdir+"/descriptors.json",descriptors_dict)
+
+	train_utils.barrier_across_hosts() #is this even needed?
 
 
 
 if __name__ == '__main__':
-	app.run(main=knn_evaluate,knn=True)
+	app.run(main=extract_dir_descriptors,knn=True)

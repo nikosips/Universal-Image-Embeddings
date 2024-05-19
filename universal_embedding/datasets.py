@@ -51,6 +51,14 @@ UniversalEmbeddingKnnEvalDataset = collections.namedtuple(
     ],
 )
 
+ExtractDataset = collections.namedtuple(
+    # Each instance of the Dataset.
+    'Extract_Dataset',
+    [
+        'extract_iter',
+        'meta_data',
+    ],
+)
 
 
 def _normalize_image(
@@ -104,9 +112,9 @@ def _resize(image, image_size):
   """
 
   return tf.image.resize(
-      image,
-      [image_size, image_size],
-      method=tf.image.ResizeMethod.BILINEAR,
+    image,
+    [image_size, image_size],
+    method=tf.image.ResizeMethod.BILINEAR,
   )
 
 
@@ -116,7 +124,6 @@ def _resize_smaller_edge(
 ):
 
   """Resizes the smaller edge to the desired size and keeps the aspect ratio."""
-
   shape = tf.shape(image)
   height, width = shape[0], shape[1]
   if height <= width:
@@ -162,12 +169,12 @@ def preprocess_example(
   """
 
   features = tf.io.parse_single_example(
-      example,
-      features={
-        'image_bytes': tf.io.FixedLenFeature([], tf.string),
-        'key': tf.io.FixedLenFeature([], tf.string),
-        'class_id': tf.io.FixedLenFeature([], tf.int64),
-      },
+    example,
+    features={
+      'image_bytes': tf.io.FixedLenFeature([], tf.string),
+      'key': tf.io.FixedLenFeature([], tf.string),
+      'class_id': tf.io.FixedLenFeature([], tf.int64),
+    },
   )
 
   image = tf.io.decode_jpeg(features['image_bytes'], channels=3)
@@ -188,6 +195,8 @@ def preprocess_example(
   }
 
 
+
+#TODO: is domain and total classes even needed here?
 def preprocess_example_eval(
   example,
   split,
@@ -212,11 +221,11 @@ def preprocess_example_eval(
   """
 
   features = tf.io.parse_single_example(
-      example,
-      features={
-        'image_bytes': tf.io.FixedLenFeature([], tf.string),
-        'key': tf.io.FixedLenFeature([], tf.string),
-      },
+    example,
+    features={
+      'image_bytes': tf.io.FixedLenFeature([], tf.string),
+      'key': tf.io.FixedLenFeature([], tf.string),
+    },
   )
 
   image = tf.io.decode_jpeg(features['image_bytes'], channels=3)
@@ -234,6 +243,41 @@ def preprocess_example_eval(
     'domain': domain,
     'domain_idx': domain_idx,
   }
+
+
+
+#TODO: is domain and total classes even needed here?
+def preprocess_example_extract(
+  example,
+  dtype=tf.float32,
+  normalization_statistics = None,
+):
+  """Preprocesses the given image.
+
+  Args:
+    example: The proto of the current example.
+    augment: whether to augment the image.
+    dtype: Tensorflow data type; Data type of the image.
+
+  Returns:
+    A preprocessed image `Tensor`.
+  """
+
+  #TODO: make it work for non-jpeg
+
+  image = tf.io.read_file(example)
+
+  image = tf.image.decode_jpeg(image, channels=3)
+
+  image = _process_test_split(image)
+
+  image = _normalize_image(image,normalization_statistics)
+  image = tf.image.convert_image_dtype(image, dtype=dtype)
+
+  return {
+    'inputs': image,
+  }
+
 
 
 
@@ -326,7 +370,7 @@ def load_tfrecords(
       )
 
 
-  if not dataset_kwargs['knn']:
+  if not dataset_kwargs['knn']: #if in training
 
     data = data.map(
         _preprocess_example,
@@ -342,6 +386,125 @@ def load_tfrecords(
 
 
   return data
+
+
+
+def load_dir_dataset(
+    base_dir,
+    list_of_paths,
+    augment=False,
+    parallel_reads=4,
+    **dataset_kwargs,
+):
+  """Loads the tfds.
+
+  Args:
+    dataset_name: str; name of the dataset.
+    split: str; One of 'train', 'val', 'test' or 'index.
+    augment: whether to augment the images.
+    parallel_reads: int; Number of parallel readers (set to 1 for determinism).
+    label_offset: int; The offset of label id.
+
+  Returns:
+    tf.data.Datasets for training, testing and validation. if
+    n_validation_shards is 0, the validation dataset will be None.
+  """
+
+  if list_of_paths is not None:
+
+    data=tf.data.Dataset.from_tensor_slices(list_of_paths)
+    paths = list_of_paths
+
+  else: 
+
+    data = tf.data.Dataset.list_files(base_dir + "/*",shuffle = False)
+    #different generator to not consume first
+    data2 = tf.data.Dataset.list_files(base_dir + "/*",shuffle = False)
+
+    paths = [x.numpy().decode('utf-8') for x in data2]
+
+
+
+  if 'clip' in dataset_kwargs["config"].model_class:
+
+    model_configs = info_utils.CLIP_ViT_configs
+
+  else:
+
+    model_configs = info_utils.ViT_configs
+
+  #a dict of mean and std for image normalization
+  normalization_statistics = model_configs[dataset_kwargs["config"].model_type]["normalization_statistics"]
+
+
+  def _preprocess_example(example):
+
+    return preprocess_example_extract(
+      example,
+      normalization_statistics = normalization_statistics,
+    )
+
+
+  data = data.map(
+    _preprocess_example,
+    num_parallel_calls=1, #could that be more than 1? will it have any problems with random order?
+  )
+
+  return data,paths
+
+
+
+
+def build_extract_dir_dataset(
+  dataset_fn,
+  batch_size=None,
+  shuffle_buffer_size=256,
+  seed=None,
+  repeat=False,
+  sampling=None,
+  **dataset_kwargs,
+):
+  """Dataset builder that takes care of strategy, batching and shuffling.
+
+  Args:
+    dataset_fn: function; A function that loads the dataset.
+    batch_size: int; Size of the batch.
+    shuffle_buffer_size: int; Size of the buffer for used for shuffling.
+    seed: int; Random seed used for shuffling.
+    repeat: bool; Whether to repeat the dataset.
+    sampling: str; the sampling option for multiple datasets
+    **dataset_kwargs: dict; Arguments passed to TFDS.
+
+  Returns:
+    Dataset.
+  """
+
+  def _shuffle_batch_prefetch(dataset, replica_batch_size):
+
+    dataset=dataset.batch(replica_batch_size, drop_remainder=False)
+
+    options=tf.data.Options()
+    options.experimental_optimization.parallel_batch=True
+    dataset=dataset.with_options(options)
+
+    return dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
+
+  def _dataset_fn(input_context=None): #worn work yet, todo: fix it
+    """Dataset function."""
+
+    replica_batch_size = batch_size
+
+    if input_context:
+      replica_batch_size = input_context.get_per_replica_batch_size(batch_size)
+
+    generator,paths = dataset_fn(**dataset_kwargs)
+
+    #dataset_fn here is "build_universal_embedding_dataset_new"
+    return _shuffle_batch_prefetch(generator, replica_batch_size),paths
+
+
+  return _dataset_fn()
 
 
 
@@ -582,7 +745,7 @@ def get_training_dataset(
 
   input_shape = (
     -1,
-    IMAGE_SIZE,
+    IMAGE_SIZE, #todo: take this from the config
     IMAGE_SIZE,
     3,
   )
@@ -747,13 +910,103 @@ def get_knn_eval_datasets(
 
   knn_info['knn_setup'] = knn_setup
 
+
+  input_shape = (
+    -1,
+    IMAGE_SIZE, #todo: take this from the config
+    IMAGE_SIZE,
+    3,
+  )
+
+
   meta_data = {
+    'input_shape': input_shape,
     'dataset_names': ','.join(dataset_names),
     'top_k': int(config.top_k),
     'size_info': size_info,
+    'num_classes': -1,
+    'input_dtype': getattr(jnp, config.data_dtype_str),
   }
 
   return UniversalEmbeddingKnnEvalDataset(
     knn_info,
+    meta_data,
+  )
+
+
+
+def get_extract_dataset(
+    config,
+    base_dir,
+    list_of_paths,
+    eval_batch_size: int,
+    prefetch_buffer_size: Optional[int] = 2,
+):
+  """Returns generators for the extract dataset.
+
+  Args:
+    eval_batch_size: The eval batch size.
+    prefetch_buffer_size: int; Buffer size for the device prefetch.
+
+  Returns:
+    A dataset_utils.Dataset() which includes a train_iter, a valid_iter,
+      a test_iter, and a dict of meta_data.
+  """
+
+  device_count = jax.device_count()
+  logging.info('device_count: %d', device_count)
+  logging.info('num_hosts : %d', jax.process_count())
+  logging.info('host_id : %d', jax.process_index())
+
+  local_eval_batch_size = eval_batch_size // jax.process_count()
+
+  logging.info('local_eval_batch_size : %d', local_eval_batch_size)
+
+  num_local_shards = jax.local_device_count()
+
+  maybe_pad_batches_eval = functools.partial(
+    dataset_utils.maybe_pad_batch,
+    train=False,
+    batch_size=local_eval_batch_size,
+  )
+
+  shard_batches = functools.partial(
+    dataset_utils.shard,
+    n_devices=num_local_shards,
+  )
+        
+  extract_ds,paths = build_extract_dir_dataset(
+    dataset_fn=load_dir_dataset,
+    batch_size=local_eval_batch_size,
+    base_dir = base_dir,
+    config = config,
+    list_of_paths = list_of_paths,
+  )
+
+  extract_iter = build_ds_iter(
+    extract_ds,
+    maybe_pad_batches_eval,
+    shard_batches,
+    prefetch_buffer_size,
+  )
+
+  #TODO: check that with multiple gpus data dont get mixed
+
+  input_shape = (
+    -1,
+    IMAGE_SIZE, #todo: take this from the config
+    IMAGE_SIZE,
+    3,
+  )
+
+  meta_data = {
+    'input_shape': input_shape,
+    'num_classes': -1,
+    'input_dtype': getattr(jnp, config.data_dtype_str),
+    'paths' : paths,
+  }
+
+  return ExtractDataset(
+    extract_iter,
     meta_data,
   )

@@ -12,6 +12,15 @@ from universal_embedding import info_utils
 
 
 
+
+def save_descriptors(descr_save_path,all_descriptors_dict):
+
+  with gfile.GFile(descr_save_path, mode='wb') as data:
+    data.write(json.dumps(all_descriptors_dict,cls = NumpyEncoder))
+    print(f"descriptors file complete: {descr_save_path}")
+
+
+
 def calc_train_dependent_config_values(config):
 
   #model

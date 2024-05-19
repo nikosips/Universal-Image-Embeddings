@@ -79,23 +79,19 @@ def _run_main(
   #here we should calculate all dependent parameters.
   #calculate config dependent values based on cmd line config args
 
-  if knn:
+
+
+  if knn: #case of knn or extract_dir_descriptors
 
     #dependent value, can't be evaluated in the config
     train_config_params = utils.read_config(os.path.join(FLAGS.config.train_dir,"config.json"))
     train_config_params.update(FLAGS.config)
     FLAGS.config = train_config_params
 
-  elif descr_eval:
-
-    pass
-
-  else:
-    
-    utils.calc_train_dependent_config_values(FLAGS.config)
-
 
   if (not knn) and (not descr_eval): #save the training config
+
+    utils.calc_train_dependent_config_values(FLAGS.config) 
 
     with gfile.GFile(os.path.join(FLAGS.workdir,"config.json"), mode = "w") as f:
       
@@ -132,6 +128,7 @@ def _run_main(
   )
   
   if jax.process_index() == 0:
+
     platform.work_unit().create_artifact(
       platform.ArtifactType.DIRECTORY,
       FLAGS.workdir, 
@@ -169,11 +166,11 @@ def _run_main(
     )
 
   except KeyboardInterrupt:
-      
-      if FLAGS.use_wandb:
-       wandb.finish()
-      
-      sys.exit()
+    
+    if FLAGS.use_wandb:
+      wandb.finish()
+    
+    sys.exit()
 
   if FLAGS.use_wandb:
     wandb.finish()

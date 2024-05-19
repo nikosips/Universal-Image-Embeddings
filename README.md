@@ -155,8 +155,17 @@ Now that the data are ready, you are ready to train and evaluate embeddings on t
 
 * <b>Extraction of embeddings on your own images using models trained on UnED</b>
 
-  TODO
-
+  Configure the "config_extract_dir_descriptors.py" to the type of descriptor extraction you want to perform.
+  Configure config.base_dir to the directory that contains the images that you want to extract descriptors for.
+  Configure config.train_dir in the config file to the directory that the checkpoint of the training is saved (the config.json of the training must also exist there).
+  Descriptors will be saved in ```WORKDIR```.
+  ```
+  python -m universal_embedding.extract_dir_descriptors \
+  --config=universal_embedding/configs/config_extract_dir_descriptors.py \
+  --workdir=[YOUR_WORKDIR] \
+  --config.train_dir=[MODEL TRAIN DIR] \ 
+  --config.base_dir=[DIR OF YOUR IMAGES]
+  ```
 
 
 ## Explanation of splits and the standard protocol for evaluating embeddings on the UnED dataset 

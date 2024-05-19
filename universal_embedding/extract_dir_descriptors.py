@@ -33,27 +33,7 @@ def extract_dir_descriptors(
 
 	lead_host = jax.process_index() == 0
 
-
-	### To remove code
-	my_list_of_paths_flag=True
-
-	if my_list_of_paths_flag:
-
-		####################
-		with open(os.path.join(config.base_dir, 'test_gallery.txt')) as fid:
-		#with open(os.path.join(config.base_dir, 'test_query.txt')) as fid:    
-			db_lines = fid.read().splitlines()
-
-		db_lines = [os.path.join(config.base_dir, x.split(',')[0]) for x in db_lines] 
-
-		list_of_paths=db_lines
-
-	else:
-
-		list_of_paths=None
-
-	###
-
+	list_of_paths=None #give a list of paths to extract from instead
 
 	dataset_dict = datasets.get_extract_dataset(
 		config,

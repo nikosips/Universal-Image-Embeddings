@@ -5,6 +5,9 @@ and cosine classifier.
 from typing import Any, Callable, Iterable, Optional
 from absl import logging
 
+
+import ml_collections
+
 import flax
 import flax.linen as nn
 import jax.numpy as jnp
@@ -34,27 +37,31 @@ class ViTWithEmbedding(vit.ViT):
 
 
   output_dim: int = -1
+  dataset_meta_data: Any = None
+  config: ml_collections.ConfigDict = None
 
   #We override the __call__ method of ViT class
   @nn.compact
   def __call__(
-      self,
-      x: jnp.ndarray, #batch of images
-      *,
-      train: bool,
-      init: bool = False,
-      debug: bool = False,
-      return_feats: bool = False,
-      project_feats: bool = True,
+    self,
+    x: jnp.ndarray, #batch of images
+    domain: int,
+    *,
+    train: bool,
+    init: bool = False,
+    debug: bool = False,
+    return_feats: bool = False,
+    project_feats: bool = True,
   ):
 
+    if train or init:
+      current_dataset=self.dataset_meta_data["dataset_name"].split(",")[domain]
 
     outputs = {}
     outputs['embeddings'] = {}
 
     if train or init:
       outputs['classifier'] = {}
-
 
     fh, fw = self.patches.size
 
@@ -114,17 +121,25 @@ class ViTWithEmbedding(vit.ViT):
 
       outputs['embeddings']['projected'] = x #TODO: use of project_feats flag is not needed anymore since they are two different named embeddings now
 
-    if not return_feats: # pass through classification layer
+
+    if not return_feats: # pass through classification layer #(can be replaced with if train or init?)
+
+      #add classifier to new file
+      if self.config.classifier=="separate":
+        classifier_domain=domain
+        classifier_num_classes=self.dataset_meta_data['classes_per_dataset'][current_dataset]
+      elif self.config.classifier=="joint":
+        classifier_domain=0 #1 "domain" for all that will contain the sum of the classes
+        classifier_num_classes=self.num_classes#sum classes
 
       x = nn.Dense(
-          self.num_classes,
-          use_bias=False,
-          kernel_init=nn.initializers.lecun_uniform(),
-          name='output_projection',
+        classifier_num_classes,
+        use_bias=False,
+        kernel_init=nn.initializers.lecun_uniform(),
+        name=f'output_projection_{classifier_domain}',
       )(x)
-
       weights_norms = jnp.linalg.norm(
-          self.variables['params']['output_projection']['kernel'], axis=0
+        self.variables['params'][f'output_projection_{classifier_domain}']['kernel'], axis=0
       )  # norms of class prototypes
       x /= weights_norms
 
@@ -151,7 +166,11 @@ class ViTWithEmbeddingClassificationModel(
       )
   
     return ViTWithEmbedding(
-        num_classes=self.dataset_meta_data['num_classes'],
+        
+        num_classes=self.dataset_meta_data['num_classes'], #total classes
+        dataset_meta_data=self.dataset_meta_data,
+        config=self.config,
+        
         mlp_dim=self.config.model.mlp_dim,
         num_layers=self.config.model.num_layers,
         num_heads=self.config.model.num_heads,
@@ -175,20 +194,20 @@ class ViTWithEmbeddingClassificationModel(
   def default_flax_model_config(self) -> ml_collections.ConfigDict:
 
     return ml_collections.ConfigDict(
-        {
-            'model': dict(
-                num_heads=2,
-                num_layers=1,
-                representation_size=16,
-                mlp_dim=32,
-                dropout_rate=0.0,
-                attention_dropout_rate=0.0,
-                hidden_size=16,
-                patches={'size': (4, 4)},
-                classifier='gap',
-                data_dtype_str='float32',
-            )
-        }
+      {
+        'model': dict(
+          num_heads=2,
+          num_layers=1,
+          representation_size=16,
+          mlp_dim=32,
+          dropout_rate=0.0,
+          attention_dropout_rate=0.0,
+          hidden_size=16,
+          patches={'size': (4, 4)},
+          classifier='gap',
+          data_dtype_str='float32',
+        )
+      }
     )
 
   def init_from_train_state(

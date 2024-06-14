@@ -990,8 +990,6 @@ def get_extract_dataset(
     prefetch_buffer_size,
   )
 
-  #TODO: check that with multiple gpus data dont get mixed
-
   input_shape = (
     -1,
     IMAGE_SIZE, #todo: take this from the config

@@ -73,13 +73,8 @@ def _run_main(
   
   del argv
 
-  #TODO: make sure the cmd line overriding values have already replaced the predefined ones
-  #they are the correct here
-
   #here we should calculate all dependent parameters.
   #calculate config dependent values based on cmd line config args
-
-
 
   if knn: #case of knn or extract_dir_descriptors
 
